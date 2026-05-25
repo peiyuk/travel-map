@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pei's Travel Map</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:sans-serif;background:#0f0f1a;color:#e8e8f0;min-height:100vh}
+h1{font-size:22px;font-weight:500}
+.header{padding:2rem 2rem 1rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
+.subtitle{font-size:14px;color:#888}
+.stats{display:flex;gap:1rem;padding:0 2rem 1.5rem;flex-wrap:wrap}
+.stat{background:#1a1a2e;border:0.5px solid #333;border-radius:10px;padding:.75rem 1.25rem}
+.stat-num{font-size:22px;font-weight:500;color:#7fb3f5}
+.stat-label{font-size:12px;color:#888;margin-top:2px}
+.tabs{display:flex;gap:0;padding:0 2rem 1.5rem}
+.tab{padding:6px 18px;font-size:13px;border:0.5px solid #333;background:transparent;color:#888;cursor:pointer;transition:all .2s}
+.tab:first-child{border-radius:8px 0 0 8px}
+.tab:last-child{border-radius:0 8px 8px 0}
+.tab.active{background:#1e3a5f;color:#7fb3f5;border-color:#2a5a8f}
+#map-view{padding:0 2rem 2rem}
+#map-container{position:relative;width:100%}
+#map-container svg{width:100%;height:auto;display:block}
+.tooltip{position:absolute;background:#1a1a2e;border:0.5px solid #3a5a8f;border-radius:8px;padding:10px 14px;font-size:13px;pointer-events:none;display:none;z-index:10;max-width:200px}
+.tooltip-country{font-weight:500;font-size:14px;color:#7fb3f5;margin-bottom:4px}
+.tooltip-info{color:#aaa;font-size:12px;line-height:1.6}
+#list-view{display:none;padding:0 2rem 2rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.card{background:#1a1a2e;border:0.5px solid #333;border-radius:10px;padding:1rem;cursor:pointer;transition:border-color .2s}
+.card:hover{border-color:#4a8abf}
+.card-flag{font-size:28px;margin-bottom:8px}
+.card-name{font-size:15px;font-weight:500;margin-bottom:4px}
+.card-meta{font-size:12px;color:#888;line-height:1.7}
+.badge{display:inline-block;background:#1e3a5f;color:#7fb3f5;font-size:11px;padding:2px 8px;border-radius:20px;margin-top:6px}
+.region-filter{display:flex;gap:8px;flex-wrap:wrap;padding:0 2rem 1rem}
+.rf{font-size:12px;padding:4px 12px;border:0.5px solid #333;border-radius:20px;background:transparent;color:#888;cursor:pointer}
+.rf.active{background:#1e3a5f;color:#7fb3f5;border-color:#2a5a8f}
+#add-view{display:none;padding:0 2rem 2rem}
+.form-card{background:#1a1a2e;border:0.5px solid #333;border-radius:12px;padding:1.5rem;max-width:520px}
+.form-title{font-size:16px;font-weight:500;margin-bottom:1.25rem;color:#c8d8f8}
+.form-row{margin-bottom:1rem}
+.form-row label{display:block;font-size:12px;color:#888;margin-bottom:6px}
+.form-row input,.form-row select,.form-row textarea{width:100%;background:#0f0f1a;border:0.5px solid #333;border-radius:8px;padding:8px 12px;color:#e8e8f0;font-size:14px;font-family:sans-serif;outline:none;transition:border-color .2s}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:#4a8abf}
+.form-row select option{background:#1a1a2e}
+.form-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn{padding:8px 20px;border-radius:8px;font-size:14px;cursor:pointer;border:0.5px solid #333;transition:all .2s}
+.btn-primary{background:#1e3a5f;color:#7fb3f5;border-color:#2a5a8f}
+.btn-primary:hover{background:#2a5a8f}
+.btn-ghost{background:transparent;color:#888}
+.btn-ghost:hover{color:#e8e8f0}
+.btn-danger{background:transparent;color:#e06060;border-color:#6a3030;font-size:12px;padding:4px 10px}
+.btn-danger:hover{background:#3a1a1a}
+.form-actions{display:flex;gap:10px;margin-top:1.25rem}
+.msg{font-size:13px;padding:8px 12px;border-radius:8px;margin-top:10px;display:none}
+.msg.success{background:#0f3a20;color:#5abf80;border:0.5px solid #2a6a40;display:block}
+.msg.error{background:#3a0f0f;color:#e06060;border:0.5px solid #6a2a2a;display:block}
+#added-trips{margin-top:1.5rem}
+.added-title{font-size:13px;color:#888;margin-bottom:10px}
+.added-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#0f0f1a;border:0.5px solid #222;border-radius:8px;margin-bottom:6px;font-size:13px}
+.added-item-info{color:#c8d8f8}
+.added-item-date{color:#888;font-size:12px}
+.modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center}
+.modal.open{display:flex}
+.modal-box{background:#1a1a2e;border:0.5px solid #3a5a8f;border-radius:14px;padding:1.5rem;max-width:420px;width:90%;max-height:80vh;overflow-y:auto}
+.modal-header{display:flex;align-items:center;gap:12px;margin-bottom:1rem}
+.modal-flag{font-size:36px}
+.modal-title{font-size:20px;font-weight:500}
+.modal-subtitle{font-size:13px;color:#888}
+.modal-close{margin-left:auto;background:transparent;border:none;color:#888;font-size:20px;cursor:pointer;padding:4px 8px}
+.modal-close:hover{color:#fff}
+.trip-item{border-top:0.5px solid #2a2a4a;padding:10px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.trip-city{font-size:14px;font-weight:500;color:#c8d8f8}
+.trip-date{font-size:12px;color:#888;margin-top:2px}
+.trip-companion{font-size:12px;color:#7aaa88;margin-top:2px}
+.trip-note{font-size:12px;color:#aaa;margin-top:2px;font-style:italic}
+.section-title{font-size:13px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.new-badge{display:inline-block;background:#0f3a20;color:#5abf80;font-size:10px;padding:1px 6px;border-radius:10px;margin-left:6px;vertical-align:middle}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🌍 Pei's Travel Map</h1>
+  <span class="subtitle">2007 – present</span>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="stat-num" id="s-countries">0</div><div class="stat-label">個國家</div></div>
+  <div class="stat"><div class="stat-num" id="s-cities">0</div><div class="stat-label">個城市</div></div>
+  <div class="stat"><div class="stat-num" id="s-trips">0</div><div class="stat-label">次出遊</div></div>
+  <div class="stat"><div class="stat-num" id="s-fav">—</div><div class="stat-label">最常去</div></div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('map')">🗺 地圖</button>
+  <button class="tab" onclick="switchTab('list')">📋 列表</button>
+  <button class="tab" onclick="switchTab('add')">＋ 新增行程</button>
+</div>
+
+<div id="map-view">
+  <div id="map-container">
+    <div class="tooltip" id="tooltip">
+      <div class="tooltip-country" id="tt-name"></div>
+      <div class="tooltip-info" id="tt-info"></div>
+    </div>
+  </div>
+</div>
+
+<div id="list-view">
+  <div class="region-filter">
+    <button class="rf active" onclick="filterRegion('全部',this)">全部</button>
+    <button class="rf" onclick="filterRegion('亞洲',this)">亞洲</button>
+    <button class="rf" onclick="filterRegion('歐洲',this)">歐洲</button>
+  </div>
+  <div class="grid" id="card-grid"></div>
+</div>
+
+<div id="add-view">
+  <div class="form-card">
+    <div class="form-title">新增旅遊紀錄</div>
+    <div class="form-2col">
+      <div class="form-row">
+        <label>國家</label>
+        <input id="f-country" placeholder="例：日本" />
+      </div>
+      <div class="form-row">
+        <label>地區</label>
+        <select id="f-region">
+          <option value="亞洲">亞洲</option>
+          <option value="歐洲">歐洲</option>
+          <option value="美洲">美洲</option>
+          <option value="非洲">非洲</option>
+          <option value="大洋洲">大洋洲</option>
+          <option value="中東">中東</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>城市</label>
+      <input id="f-city" placeholder="例：東京" />
+    </div>
+    <div class="form-2col">
+      <div class="form-row">
+        <label>出發日期</label>
+        <input type="date" id="f-from" />
+      </div>
+      <div class="form-row">
+        <label>返回日期</label>
+        <input type="date" id="f-to" />
+      </div>
+    </div>
+    <div class="form-row">
+      <label>同行人員（選填）</label>
+      <input id="f-companion" placeholder="例：家人、朋友、自己" />
+    </div>
+    <div class="form-row">
+      <label>備註 / 心得（選填）</label>
+      <textarea id="f-note" rows="2" placeholder="簡短紀錄..."></textarea>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="addTrip()">儲存紀錄</button>
+      <button class="btn btn-ghost" onclick="clearForm()">清除</button>
+    </div>
+    <div class="msg" id="form-msg"></div>
+  </div>
+
+  <div id="added-trips"></div>
+</div>
+
+<div class="modal" id="modal" onclick="closeModal(event)">
+  <div class="modal-box" id="modal-box">
+    <div class="modal-header">
+      <span class="modal-flag" id="m-flag"></span>
+      <div><div class="modal-title" id="m-name"></div><div class="modal-subtitle" id="m-sub"></div></div>
+      <button class="modal-close" onclick="document.getElementById('modal').classList.remove('open')">✕</button>
+    </div>
+    <div id="m-trips"></div>
+  </div>
+</div>
+
+<script>
+const BASE_TRIPS = [
+  {country:"香港",city:"香港",region:"亞洲",from:"2007-10-26",to:"2007-10-28",companion:"家人(媽媽、哥哥)"},
+  {country:"中國",city:"北京",region:"亞洲",from:"2011-01-05",to:"2011-01-09",companion:"家人(媽媽、哥哥和爸爸)"},
+  {country:"日本",city:"東京",region:"亞洲",from:"2014-08-22",to:"2014-08-26",companion:"自己"},
+  {country:"韓國",city:"首爾",region:"亞洲",from:"2016-07-06",to:"2016-07-18",companion:"朋友(黃詩涵)"},
+  {country:"中國",city:"溫州",region:"亞洲",from:"2017-07-26",to:"2017-07-30",companion:"家人(媽媽、哥哥和爸爸)"},
+  {country:"新加坡",city:"新加坡",region:"亞洲",from:"2017-08-27",to:"2017-08-28",companion:"家人(哥哥)"},
+  {country:"英國",city:"倫敦",region:"歐洲",from:"2017-08-28",to:"2017-09-11",companion:"家人(哥哥)"},
+  {country:"日本",city:"大阪",region:"亞洲",from:"2018-02-21",to:"2018-02-25",companion:"家人(媽媽和爸爸)"},
+  {country:"日本",city:"京都",region:"亞洲",from:"2018-02-21",to:"2018-02-25",companion:"家人(媽媽和爸爸)"},
+  {country:"韓國",city:"首爾",region:"亞洲",from:"2018-08-26",to:"2018-09-04",companion:"家人(哥哥)"},
+  {country:"日本",city:"北海道",region:"亞洲",from:"2019-02-09",to:"2019-02-13",companion:"家人(媽媽、哥哥和爸爸)"},
+  {country:"韓國",city:"首爾",region:"亞洲",from:"2019-06-06",to:"2019-06-09",companion:"家人(媽媽、哥哥和爸爸)"},
+  {country:"新加坡",city:"新加坡",region:"亞洲",from:"2019-09-02",to:"2019-09-07",companion:"自己"},
+  {country:"日本",city:"大阪",region:"亞洲",from:"2020-01-29",to:"2020-02-04",companion:"家人(媽媽、哥哥和爸爸)"},
+  {country:"日本",city:"京都",region:"亞洲",from:"2020-01-29",to:"2020-02-04",companion:"家人(媽媽、哥哥和爸爸)"},
+  {country:"泰國",city:"曼谷",region:"亞洲",from:"2023-06-22",to:"2023-06-27",companion:"朋友(尤、玟)"},
+  {country:"日本",city:"東京",region:"亞洲",from:"2023-08-26",to:"2023-08-30",companion:"家人(媽媽)"},
+  {country:"西班牙",city:"巴塞隆納",region:"歐洲",from:"2023-10-28",to:"2023-11-01",companion:""},
+  {country:"西班牙",city:"馬德里",region:"歐洲",from:"2023-10-28",to:"2023-11-01",companion:""},
+  {country:"西班牙",city:"Tossa",region:"歐洲",from:"2023-10-28",to:"2023-11-01",companion:""},
+  {country:"葡萄牙",city:"波多",region:"歐洲",from:"2023-11-01",to:"2023-11-04",companion:""},
+  {country:"葡萄牙",city:"里斯本",region:"歐洲",from:"2023-11-01",to:"2023-11-04",companion:""},
+  {country:"荷蘭",city:"阿姆斯特丹",region:"歐洲",from:"2023-12-16",to:"2023-12-19",companion:""},
+  {country:"荷蘭",city:"海牙",region:"歐洲",from:"2023-12-16",to:"2023-12-19",companion:""},
+  {country:"荷蘭",city:"鹿特丹",region:"歐洲",from:"2023-12-16",to:"2023-12-19",companion:""},
+  {country:"法國",city:"巴黎",region:"歐洲",from:"2023-12-22",to:"2023-12-27",companion:""},
+  {country:"義大利",city:"米蘭",region:"歐洲",from:"2024-01-13",to:"2024-01-15",companion:""},
+  {country:"荷蘭",city:"阿姆斯特丹",region:"歐洲",from:"2024-01-16",to:"2024-01-20",companion:""},
+  {country:"比利時",city:"布魯塞爾",region:"歐洲",from:"2024-01-19",to:"2024-01-19",companion:""},
+  {country:"冰島",city:"雷克雅維克",region:"歐洲",from:"2024-01-21",to:"2024-01-23",companion:""},
+  {country:"羅馬尼亞",city:"布加勒斯特",region:"歐洲",from:"2024-01-26",to:"2024-01-28",companion:""},
+  {country:"匈牙利",city:"布達佩斯",region:"歐洲",from:"2024-02-03",to:"2024-02-05",companion:""},
+  {country:"愛爾蘭",city:"都柏林",region:"歐洲",from:"2024-02-17",to:"2024-02-19",companion:""},
+  {country:"法國",city:"里昂",region:"歐洲",from:"2024-03-01",to:"2024-03-03",companion:""},
+  {country:"義大利",city:"威尼斯",region:"歐洲",from:"2024-05-08",to:"2024-05-10",companion:""},
+  {country:"瑞典",city:"馬爾默",region:"歐洲",from:"2024-05-13",to:"2024-05-13",companion:""},
+  {country:"丹麥",city:"哥本哈根",region:"歐洲",from:"2024-05-13",to:"2024-05-15",companion:""},
+  {country:"德國",city:"柏林",region:"歐洲",from:"2024-05-15",to:"2024-05-18",companion:""},
+  {country:"波蘭",city:"Krakow",region:"歐洲",from:"2024-06-06",to:"2024-06-11",companion:""},
+  {country:"奧地利",city:"維也納",region:"歐洲",from:"2024-06-11",to:"2024-06-14",companion:""},
+  {country:"斯洛伐克",city:"布拉提斯拉瓦",region:"歐洲",from:"2024-06-12",to:"2024-06-12",companion:""},
+  {country:"捷克",city:"布拉格",region:"歐洲",from:"2024-06-14",to:"2024-06-18",companion:""},
+  {country:"捷克",city:"Karlovy Vary",region:"歐洲",from:"2024-06-14",to:"2024-06-18",companion:""},
+  {country:"希臘",city:"雅典",region:"歐洲",from:"2024-06-26",to:"2024-07-01",companion:""},
+  {country:"希臘",city:"聖托里尼",region:"歐洲",from:"2024-06-26",to:"2024-07-01",companion:""},
+  {country:"韓國",city:"首爾",region:"亞洲",from:"2024-09-11",to:"2024-09-16",companion:""},
+  {country:"奧地利",city:"維也納",region:"歐洲",from:"2024-10-16",to:"2024-10-24",companion:""},
+  {country:"奧地利",city:"哈修施塔特",region:"歐洲",from:"2024-10-16",to:"2024-10-24",companion:""},
+  {country:"奧地利",city:"薩爾斯堡",region:"歐洲",from:"2024-10-16",to:"2024-10-24",companion:""},
+  {country:"匈牙利",city:"布達佩斯",region:"歐洲",from:"2024-10-18",to:"2024-10-20",companion:"家人(媽媽)"},
+  {country:"斯洛伐克",city:"布拉提斯拉瓦",region:"歐洲",from:"2024-10-21",to:"2024-10-21",companion:""},
+  {country:"捷克",city:"CK小鎮",region:"歐洲",from:"2024-10-24",to:"2024-10-27",companion:""},
+  {country:"捷克",city:"布拉格",region:"歐洲",from:"2024-10-24",to:"2024-10-27",companion:""},
+  {country:"愛爾蘭",city:"都柏林",region:"歐洲",from:"2024-12-03",to:"2024-12-03",companion:"自己"},
+  {country:"瑞典",city:"斯德哥爾摩",region:"歐洲",from:"2025-01-16",to:"2025-01-18",companion:""},
+  {country:"西班牙",city:"Palma de Mallorca",region:"歐洲",from:"2025-06-03",to:"2025-06-06",companion:""},
+  {country:"德國",city:"漢堡",region:"歐洲",from:"2025-06-17",to:"2025-06-19",companion:""},
+  {country:"荷蘭",city:"Eindhoven",region:"歐洲",from:"2025-09-05",to:"2025-09-06",companion:""},
+  {country:"比利時",city:"布魯日",region:"歐洲",from:"2025-09-06",to:"2025-09-07",companion:""},
+  {country:"比利時",city:"根特",region:"歐洲",from:"2025-09-08",to:"2025-09-08",companion:""},
+  {country:"比利時",city:"布魯塞爾",region:"歐洲",from:"2025-09-08",to:"2025-09-09",companion:""},
+  {country:"盧森堡",city:"盧森堡",region:"歐洲",from:"2025-09-09",to:"2025-09-09",companion:""},
+  {country:"法國",city:"巴黎",region:"歐洲",from:"2025-09-19",to:"2025-09-22",companion:""},
+  {country:"西班牙",city:"巴賽隆納",region:"歐洲",from:"2025-10-06",to:"2025-10-09",companion:""},
+  {country:"義大利",city:"羅馬",region:"歐洲",from:"2026-01-11",to:"2026-01-14",companion:""},
+  {country:"韓國",city:"首爾",region:"亞洲",from:"2026-03-01",to:"2026-03-07",companion:""},
+  {country:"西班牙",city:"馬德里",region:"歐洲",from:"2026-03-14",to:"2026-03-16",companion:""},
+  {country:"荷蘭",city:"鹿特丹",region:"歐洲",from:"2026-06-28",to:"2026-07-01",companion:""},
+];
+
+const FLAGS = {
+  "香港":"🇭🇰","中國":"🇨🇳","日本":"🇯🇵","韓國":"🇰🇷","新加坡":"🇸🇬","英國":"🇬🇧",
+  "泰國":"🇹🇭","西班牙":"🇪🇸","葡萄牙":"🇵🇹","荷蘭":"🇳🇱","法國":"🇫🇷","義大利":"🇮🇹",
+  "比利時":"🇧🇪","冰島":"🇮🇸","羅馬尼亞":"🇷🇴","匈牙利":"🇭🇺","愛爾蘭":"🇮🇪","瑞典":"🇸🇪",
+  "丹麥":"🇩🇰","德國":"🇩🇪","波蘭":"🇵🇱","奧地利":"🇦🇹","斯洛伐克":"🇸🇰","捷克":"🇨🇿",
+  "希臘":"🇬🇷","盧森堡":"🇱🇺","美國":"🇺🇸","加拿大":"🇨🇦","澳洲":"🇦🇺","紐西蘭":"🇳🇿",
+  "印度":"🇮🇳","越南":"🇻🇳","印尼":"🇮🇩","馬來西亞":"🇲🇾","台灣":"🇹🇼","菲律賓":"🇵🇭",
+  "土耳其":"🇹🇷","以色列":"🇮🇱","摩洛哥":"🇲🇦","南非":"🇿🇦","巴西":"🇧🇷","阿根廷":"🇦🇷",
+  "墨西哥":"🇲🇽","挪威":"🇳🇴","芬蘭":"🇫🇮","瑞士":"🇨🇭","克羅埃西亞":"🇭🇷","塞爾維亞":"🇷🇸"
+};
+
+let addedTrips = [];
+let allTrips = [];
+let byCountry = {};
+
+const STORAGE_KEY = 'pei_travel_trips';
+
+async function loadAdded() {
+  try {
+    const r = await window.storage.get(STORAGE_KEY);
+    addedTrips = r ? JSON.parse(r.value) : [];
+  } catch(e) { addedTrips = []; }
+  rebuild();
+}
+
+async function saveAdded() {
+  try {
+    await window.storage.set(STORAGE_KEY, JSON.stringify(addedTrips));
+  } catch(e) { console.error(e); }
+}
+
+function rebuild() {
+  allTrips = [...BASE_TRIPS, ...addedTrips].sort((a,b) => a.from.localeCompare(b.from));
+  byCountry = {};
+  allTrips.forEach(t => {
+    if (!byCountry[t.country]) byCountry[t.country] = {trips:[], region:t.region};
+    byCountry[t.country].trips.push(t);
+  });
+  updateStats();
+  renderAddedList();
+}
+
+function getDays(from, to) {
+  const d = (new Date(to) - new Date(from)) / 86400000;
+  return Math.max(1, Math.round(d));
+}
+function fmtDate(s) {
+  const d = new Date(s);
+  return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function updateStats() {
+  const countries = Object.keys(byCountry);
+  const mostV = countries.reduce((a,b) => byCountry[a].trips.length >= byCountry[b].trips.length ? a : b);
+  document.getElementById('s-countries').textContent = countries.length;
+  document.getElementById('s-cities').textContent = new Set(allTrips.map(t=>t.city)).size;
+  document.getElementById('s-trips').textContent = allTrips.length;
+  document.getElementById('s-fav').textContent = (FLAGS[mostV]||'') + mostV;
+}
+
+function switchTab(tab) {
+  ['map','list','add'].forEach((t,i) => {
+    document.querySelectorAll('.tab')[i].classList.toggle('active', t===tab);
+    document.getElementById(t+'-view').style.display = t===tab ? 'block' : 'none';
+  });
+  if (tab==='list') renderCards('全部');
+  if (tab==='add') renderAddedList();
+}
+
+function filterRegion(r, el) {
+  document.querySelectorAll('.rf').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  renderCards(r);
+}
+
+function renderCards(region) {
+  const grid = document.getElementById('card-grid');
+  grid.innerHTML = '';
+  const countries = Object.keys(byCountry);
+  countries.filter(c => region==='全部' || byCountry[c].region===region).forEach(c => {
+    const info = byCountry[c];
+    const years = [...new Set(info.trips.map(t=>new Date(t.from).getFullYear()))].sort();
+    const hasNew = info.trips.some(t=>addedTrips.includes(t));
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="card-flag">${FLAGS[c]||'🌍'}</div>
+      <div class="card-name">${c}${hasNew?'<span class="new-badge">新</span>':''}</div>
+      <div class="card-meta">${info.region} · ${info.trips.length} 次造訪<br>${years.join('、')} 年</div>
+      <span class="badge">${new Set(info.trips.map(t=>t.city)).size} 個城市</span>`;
+    card.onclick = () => openModal(c);
+    grid.appendChild(card);
+  });
+}
+
+function renderAddedList() {
+  const el = document.getElementById('added-trips');
+  if (!addedTrips.length) { el.innerHTML=''; return; }
+  el.innerHTML = `<div class="added-title" style="margin-top:1.5rem;color:#888;font-size:13px">已新增的紀錄（${addedTrips.length} 筆）</div>`;
+  [...addedTrips].reverse().forEach((t,ri) => {
+    const i = addedTrips.length - 1 - ri;
+    const div = document.createElement('div');
+    div.className = 'added-item';
+    div.innerHTML = `
+      <div>
+        <div class="added-item-info">${FLAGS[t.country]||'🌍'} ${t.country} · ${t.city}</div>
+        <div class="added-item-date">${fmtDate(t.from)} → ${fmtDate(t.to)}${t.companion?' · '+t.companion:''}</div>
+        ${t.note?`<div style="font-size:12px;color:#aaa;margin-top:2px">${t.note}</div>`:''}
+      </div>
+      <button class="btn btn-danger" onclick="deleteTrip(${i})">刪除</button>`;
+    el.appendChild(div);
+  });
+}
+
+async function addTrip() {
+  const country = document.getElementById('f-country').value.trim();
+  const city = document.getElementById('f-city').value.trim();
+  const region = document.getElementById('f-region').value;
+  const from = document.getElementById('f-from').value;
+  const to = document.getElementById('f-to').value;
+  const companion = document.getElementById('f-companion').value.trim();
+  const note = document.getElementById('f-note').value.trim();
+  const msg = document.getElementById('form-msg');
+  msg.className = 'msg';
+
+  if (!country||!city||!from||!to) {
+    msg.textContent = '請填寫國家、城市、出發和返回日期';
+    msg.className = 'msg error'; return;
+  }
+  if (new Date(to) < new Date(from)) {
+    msg.textContent = '返回日期不能早於出發日期';
+    msg.className = 'msg error'; return;
+  }
+  const trip = {country,city,region,from,to,companion,note,isNew:true};
+  addedTrips.push(trip);
+  await saveAdded();
+  rebuild();
+  clearForm();
+  msg.textContent = `✓ 已儲存：${country} · ${city}`;
+  msg.className = 'msg success';
+  setTimeout(()=>msg.className='msg', 3000);
+}
+
+async function deleteTrip(i) {
+  if (!confirm('確定刪除這筆紀錄？')) return;
+  addedTrips.splice(i, 1);
+  await saveAdded();
+  rebuild();
+}
+
+function clearForm() {
+  ['f-country','f-city','f-from','f-to','f-companion','f-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-region').value = '亞洲';
+}
+
+function openModal(c) {
+  const info = byCountry[c];
+  document.getElementById('m-flag').textContent = FLAGS[c]||'🌍';
+  document.getElementById('m-name').textContent = c;
+  document.getElementById('m-sub').textContent = `${info.region} · 共 ${info.trips.length} 次`;
+  const html = info.trips.map(t => {
+    const days = getDays(t.from, t.to);
+    return `<div class="trip-item">
+      <div>
+        <div class="trip-city">${t.city}${t.isNew?'<span class="new-badge">新</span>':''}</div>
+        <div class="trip-date">${fmtDate(t.from)} → ${fmtDate(t.to)} （${days} 天）</div>
+        ${t.companion?`<div class="trip-companion">👥 ${t.companion}</div>`:''}
+        ${t.note?`<div class="trip-note">"${t.note}"</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('m-trips').innerHTML = `<div class="section-title">行程紀錄</div>${html}`;
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal(e) {
+  if (e.target===document.getElementById('modal')) document.getElementById('modal').classList.remove('open');
+}
+
+const isoNumToAlpha2 = {392:"JP",410:"KR",156:"CN",702:"SG",764:"TH",344:"HK",826:"GB",724:"ES",620:"PT",528:"NL",250:"FR",380:"IT",56:"BE",352:"IS",642:"RO",348:"HU",372:"IE",752:"SE",208:"DK",276:"DE",616:"PL",40:"AT",703:"SK",203:"CZ",300:"GR",442:"LU",840:"US",124:"CA",36:"AU",554:"NZ",356:"IN",704:"VN",360:"ID",458:"MY",158:"TW",608:"PH",792:"TR",376:"IL",504:"MA",710:"ZA",76:"BR",32:"AR",484:"MX",578:"NO",246:"FI",756:"CH",191:"HR",688:"RS"};
+const countryToISO = {"香港":"HK","中國":"CN","日本":"JP","韓國":"KR","新加坡":"SG","英國":"GB","泰國":"TH","西班牙":"ES","葡萄牙":"PT","荷蘭":"NL","法國":"FR","義大利":"IT","比利時":"BE","冰島":"IS","羅馬尼亞":"RO","匈牙利":"HU","愛爾蘭":"IE","瑞典":"SE","丹麥":"DK","德國":"DE","波蘭":"PL","奧地利":"AT","斯洛伐克":"SK","捷克":"CZ","希臘":"GR","盧森堡":"LU","美國":"US","加拿大":"CA","澳洲":"AU","紐西蘭":"NZ","印度":"IN","越南":"VN","印尼":"ID","馬來西亞":"MY","台灣":"TW","菲律賓":"PH","土耳其":"TR","以色列":"IL","摩洛哥":"MA","南非":"ZA","巴西":"BR","阿根廷":"AR","墨西哥":"MX","挪威":"NO","芬蘭":"FI","瑞士":"CH","克羅埃西亞":"HR","塞爾維亞":"RS"};
+const isoToCountry = {};
+Object.entries(countryToISO).forEach(([k,v])=>isoToCountry[v]=k);
+
+loadAdded();
+
+fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
+  .then(r=>r.json())
+  .then(world=>{
+    const s1=document.createElement('script');
+    s1.src='https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js';
+    s1.onload=()=>{
+      const s2=document.createElement('script');
+      s2.src='https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js';
+      s2.onload=()=>renderMap(world);
+      document.head.appendChild(s2);
+    };
+    document.head.appendChild(s1);
+  }).catch(()=>{
+    document.getElementById('map-container').innerHTML='<p style="color:#888;padding:2rem">地圖載入失敗，請切換到列表模式。</p>';
+  });
+
+function renderMap(world) {
+  const W = document.getElementById('map-container').clientWidth||800;
+  const H = Math.round(W*0.5);
+  const svg = d3.select('#map-container').append('svg').attr('viewBox',`0 0 ${W} ${H}`).attr('width',W).attr('height',H);
+  const proj = d3.geoNaturalEarth1().scale(W/6.3).translate([W/2,H/2]);
+  const path = d3.geoPath().projection(proj);
+  const feat = topojson.feature(world,world.objects.countries);
+  const tooltip = document.getElementById('tooltip');
+  const container = document.getElementById('map-container');
+  svg.append('rect').attr('width',W).attr('height',H).attr('fill','#0f0f1a');
+  svg.selectAll('path').data(feat.features).join('path')
+    .attr('d',path)
+    .attr('fill',d=>{
+      const a2=isoNumToAlpha2[+d.id];
+      return a2&&byCountry[isoToCountry[a2]]?'#1e4a7a':'#1e1e32';
+    })
+    .attr('stroke',d=>{
+      const a2=isoNumToAlpha2[+d.id];
+      return a2&&byCountry[isoToCountry[a2]]?'#4a8abf':'#2a2a44';
+    })
+    .attr('stroke-width',0.5)
+    .style('cursor',d=>isoNumToAlpha2[+d.id]&&byCountry[isoToCountry[isoNumToAlpha2[+d.id]]]?'pointer':'default')
+    .on('mousemove',function(event,d){
+      const a2=isoNumToAlpha2[+d.id];
+      const cName=a2?isoToCountry[a2]:null;
+      if(!cName||!byCountry[cName])return;
+      const info=byCountry[cName];
+      const years=[...new Set(info.trips.map(t=>new Date(t.from).getFullYear()))].sort();
+      const rect=container.getBoundingClientRect();
+      tooltip.style.left=Math.min(event.clientX-rect.left+12,W-210)+'px';
+      tooltip.style.top=Math.max(event.clientY-rect.top-60,0)+'px';
+      tooltip.style.display='block';
+      document.getElementById('tt-name').textContent=(FLAGS[cName]||'')+' '+cName;
+      document.getElementById('tt-info').textContent=`${info.trips.length} 次造訪 · ${years.join('、')} 年`;
+    })
+    .on('mouseleave',()=>tooltip.style.display='none')
+    .on('click',(e,d)=>{
+      const a2=isoNumToAlpha2[+d.id];
+      const cName=a2?isoToCountry[a2]:null;
+      if(cName&&byCountry[cName])openModal(cName);
+    });
+}
+</script>
+</body>
+</html>

@@ -1,772 +1,740 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pei's Travel Map</title>
+<title>Pei 的旅遊地圖</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:sans-serif;background:#0f0f1a;color:#e8e8f0;min-height:100vh}
-.header{padding:2rem 2rem 1rem;display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap}
+.header{padding:1.5rem 2rem 1rem;display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap}
 h1{font-size:22px;font-weight:500}
-.subtitle{font-size:14px;color:#888}
-.stats{display:flex;gap:1rem;padding:0 2rem 1.5rem;flex-wrap:wrap}
-.stat{background:#1a1a2e;border:0.5px solid #333;border-radius:10px;padding:.75rem 1.25rem}
+.subtitle{font-size:14px;color:#666}
+.stats{display:flex;gap:1rem;padding:0 2rem 1.25rem;flex-wrap:wrap}
+.stat{background:#1a1a2e;border:0.5px solid #2a2a44;border-radius:10px;padding:.75rem 1.25rem;min-width:90px}
 .stat-num{font-size:22px;font-weight:500;color:#7fb3f5}
-.stat-label{font-size:12px;color:#888;margin-top:2px}
-.tabs{display:flex;padding:0 2rem 1.5rem;flex-wrap:wrap;gap:0}
-.tab{padding:6px 18px;font-size:13px;border:0.5px solid #333;background:transparent;color:#888;cursor:pointer;transition:all .2s;white-space:nowrap}
+.stat-label{font-size:12px;color:#666;margin-top:2px}
+/* tabs */
+.tabs{display:flex;padding:0 2rem 0;flex-wrap:wrap}
+.tab{padding:8px 18px;font-size:13px;border:0.5px solid #2a2a44;background:transparent;color:#888;cursor:pointer;transition:all .2s;white-space:nowrap}
 .tab:first-child{border-radius:8px 0 0 8px}
 .tab:last-child{border-radius:0 8px 8px 0}
 .tab.active{background:#1e3a5f;color:#7fb3f5;border-color:#2a5a8f}
+/* filter bar */
+.filter-bar{display:flex;gap:16px;flex-wrap:wrap;padding:1rem 2rem;align-items:flex-end}
+.filter-group{display:flex;flex-direction:column;gap:5px}
+.filter-label{font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.6px}
+.filter-select{background:#1a1a2e;border:0.5px solid #2a2a44;border-radius:8px;padding:7px 30px 7px 12px;color:#e8e8f0;font-size:14px;outline:none;cursor:pointer;min-width:120px;
+  appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center}
+.filter-select:focus{border-color:#4a8abf}
+.filter-select option{background:#1a1a2e}
+.filter-summary{font-size:13px;color:#555;padding-bottom:8px}
+/* views */
+.view{display:none;padding:0 2rem 2rem}
+.view.active{display:block}
 /* map */
-#map-view{padding:0 2rem 2rem}
-#map-container{width:100%;height:500px;border-radius:12px;overflow:hidden;border:0.5px solid #2a2a44}
+#map-wrap{width:100%;height:500px;border-radius:12px;overflow:hidden;border:0.5px solid #2a2a44}
 #leaflet-map{width:100%;height:100%}
-.map-tooltip{background:#1a1a2e;border:0.5px solid #3a5a8f;border-radius:8px;color:#e8e8f0;font-size:13px;padding:8px 12px;box-shadow:none}
-.map-tooltip b{color:#7fb3f5;display:block;margin-bottom:3px}
-.leaflet-control-zoom a{background:#1a1a2e !important;color:#7fb3f5 !important;border-color:#2a2a44 !important;line-height:26px !important}
+.leaflet-container{background:#0a0a14 !important}
+.leaflet-control-zoom a{background:#1a1a2e !important;color:#7fb3f5 !important;border-color:#2a2a44 !important}
 .leaflet-control-zoom a:hover{background:#2a5a8f !important}
-.leaflet-container{font-family:sans-serif !important;font-size:13px !important}
-.leaflet-tooltip{padding:0 !important;border:none !important;background:transparent !important;box-shadow:none !important}
-.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#1a1a2e;color:#e8e8f0}
-/* list */
-#list-view{display:none;padding:0 2rem 2rem}
-.region-filter{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem}
-.rf{font-size:12px;padding:4px 12px;border:0.5px solid #333;border-radius:20px;background:transparent;color:#888;cursor:pointer}
-.rf.active{background:#1e3a5f;color:#7fb3f5;border-color:#2a5a8f}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
-.card{background:#1a1a2e;border:0.5px solid #333;border-radius:10px;padding:1rem;cursor:pointer;transition:border-color .2s}
+.lf-tip{background:#1a1a2e;border:0.5px solid #3a5a8f;border-radius:8px;color:#e8e8f0;font-size:13px;padding:8px 12px;box-shadow:none;line-height:1.5}
+.lf-tip b{color:#7fb3f5;display:block;margin-bottom:2px}
+/* country cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.card{background:#1a1a2e;border:0.5px solid #2a2a44;border-radius:10px;padding:1rem;cursor:pointer;transition:border-color .2s}
 .card:hover{border-color:#4a8abf}
-.card-flag{font-size:28px;margin-bottom:8px}
+.card-flag{font-size:26px;margin-bottom:8px}
 .card-name{font-size:15px;font-weight:500;margin-bottom:4px}
-.card-meta{font-size:12px;color:#888;line-height:1.7}
+.card-meta{font-size:12px;color:#666;line-height:1.7}
 .pill{display:inline-block;background:#1e3a5f;color:#7fb3f5;font-size:11px;padding:2px 8px;border-radius:20px;margin-top:6px}
 /* modal */
-.modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);z-index:300;align-items:center;justify-content:center}
-.modal.open{display:flex}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
 .modal-box{background:#1a1a2e;border:0.5px solid #3a5a8f;border-radius:14px;padding:1.5rem;max-width:460px;width:92%;max-height:82vh;overflow-y:auto}
-.modal-header{display:flex;align-items:center;gap:12px;margin-bottom:1.25rem}
-.modal-flag{font-size:36px}
-.modal-title{font-size:20px;font-weight:500}
-.modal-sub{font-size:13px;color:#888}
-.modal-close{margin-left:auto;background:transparent;border:none;color:#888;font-size:20px;cursor:pointer;line-height:1}
-.modal-close:hover{color:#fff}
-/* visit cards inside modal */
+.modal-hd{display:flex;align-items:center;gap:12px;margin-bottom:1.25rem}
+.modal-flag{font-size:34px}
+.modal-title{font-size:19px;font-weight:500}
+.modal-sub{font-size:13px;color:#666}
+.modal-close{margin-left:auto;background:transparent;border:none;color:#666;font-size:20px;cursor:pointer;line-height:1;padding:2px 6px}
+.modal-close:hover{color:#e8e8f0}
 .visit-card{background:#0f0f1a;border:0.5px solid #2a2a3a;border-radius:10px;padding:12px 14px;margin-bottom:10px}
 .visit-dates{font-size:13px;font-weight:500;color:#7fb3f5;margin-bottom:6px}
 .visit-cities{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
 .city-tag{background:#1e3a5f;color:#c8d8f8;font-size:12px;padding:3px 10px;border-radius:20px}
-.visit-meta{font-size:12px;color:#888;line-height:1.7}
-.visit-note{font-size:12px;color:#aaa;font-style:italic;margin-top:4px}
-.new-badge{display:inline-block;background:#0f3a20;color:#5abf80;font-size:10px;padding:1px 6px;border-radius:10px;margin-left:6px;vertical-align:middle}
-/* add / edit */
-#add-view,#edit-view{display:none;padding:0 2rem 2rem}
-.form-card{background:#1a1a2e;border:0.5px solid #333;border-radius:12px;padding:1.5rem;max-width:540px}
-.form-section{font-size:13px;font-weight:500;color:#7fb3f5;margin:1rem 0 .5rem;padding-top:.75rem;border-top:0.5px solid #2a2a3a}
-.form-section:first-child{margin-top:0;padding-top:0;border-top:none}
-.form-row{margin-bottom:.9rem}
-.form-row label{display:block;font-size:12px;color:#888;margin-bottom:5px}
-.form-row input,.form-row select,.form-row textarea{width:100%;background:#0f0f1a;border:0.5px solid #333;border-radius:8px;padding:8px 12px;color:#e8e8f0;font-size:14px;font-family:sans-serif;outline:none;transition:border-color .2s}
-.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:#4a8abf}
-.form-row select option{background:#1a1a2e}
+.visit-meta{font-size:12px;color:#666;line-height:1.7}
+.visit-note{font-size:12px;color:#888;font-style:italic;margin-top:4px}
+.new-badge{background:#0f3a20;color:#5abf80;font-size:10px;padding:1px 6px;border-radius:10px;margin-left:6px;vertical-align:middle}
+/* forms */
+.form-card{background:#1a1a2e;border:0.5px solid #2a2a44;border-radius:12px;padding:1.5rem;max-width:540px}
+.fsec{font-size:13px;font-weight:500;color:#7fb3f5;margin:1rem 0 .6rem;padding-top:.75rem;border-top:0.5px solid #2a2a3a}
+.fsec:first-child{margin-top:0;padding-top:0;border-top:none}
+.frow{margin-bottom:.9rem}
+.frow label{display:block;font-size:12px;color:#666;margin-bottom:5px}
+.frow input,.frow select,.frow textarea{width:100%;background:#0f0f1a;border:0.5px solid #2a2a44;border-radius:8px;padding:8px 12px;color:#e8e8f0;font-size:14px;font-family:sans-serif;outline:none;transition:border-color .2s}
+.frow input:focus,.frow select:focus,.frow textarea:focus{border-color:#4a8abf}
+.frow select option{background:#1a1a2e}
 .f2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-/* cities input area */
-.cities-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;min-height:28px}
-.city-chip{display:flex;align-items:center;gap:5px;background:#1e3a5f;color:#c8d8f8;font-size:13px;padding:4px 10px;border-radius:20px}
-.city-chip button{background:transparent;border:none;color:#7fb3f5;cursor:pointer;font-size:14px;line-height:1;padding:0}
-.city-input-row{display:flex;gap:8px}
-.city-input-row input{flex:1}
-.city-add-btn{padding:8px 14px;border-radius:8px;border:0.5px solid #2a5a8f;background:#1e3a5f;color:#7fb3f5;font-size:13px;cursor:pointer;white-space:nowrap}
-.city-add-btn:hover{background:#2a5a8f}
-.btn{padding:8px 20px;border-radius:8px;font-size:14px;cursor:pointer;border:0.5px solid #333;transition:all .2s}
-.btn-primary{background:#1e3a5f;color:#7fb3f5;border-color:#2a5a8f}
-.btn-primary:hover{background:#2a5a8f}
-.btn-ghost{background:transparent;color:#888}
-.btn-ghost:hover{color:#e8e8f0}
-.btn-danger{background:transparent;color:#e06060;border-color:#6a3030;font-size:12px;padding:4px 10px}
-.btn-danger:hover{background:#3a1a1a}
-.form-actions{display:flex;gap:10px;margin-top:1.25rem;align-items:center}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;min-height:28px}
+.chip{display:flex;align-items:center;gap:5px;background:#1e3a5f;color:#c8d8f8;font-size:13px;padding:4px 10px;border-radius:20px}
+.chip button{background:transparent;border:none;color:#7fb3f5;cursor:pointer;font-size:15px;line-height:1;padding:0}
+.chip-row{display:flex;gap:8px}
+.chip-row input{flex:1}
+.chip-add{padding:8px 14px;border-radius:8px;border:0.5px solid #2a5a8f;background:#1e3a5f;color:#7fb3f5;font-size:13px;cursor:pointer}
+.chip-add:hover{background:#2a5a8f}
+.btn{padding:8px 20px;border-radius:8px;font-size:14px;cursor:pointer;border:0.5px solid #2a2a44;transition:all .2s}
+.btn-p{background:#1e3a5f;color:#7fb3f5;border-color:#2a5a8f}.btn-p:hover{background:#2a5a8f}
+.btn-g{background:transparent;color:#888}.btn-g:hover{color:#e8e8f0}
+.btn-d{background:transparent;color:#e06060;border-color:#6a3030;font-size:12px;padding:4px 10px}.btn-d:hover{background:#3a1a1a}
+.factions{display:flex;gap:10px;margin-top:1.25rem;align-items:center}
 .msg{font-size:13px;padding:8px 12px;border-radius:8px;margin-top:10px;display:none}
-.msg.success{background:#0f3a20;color:#5abf80;border:0.5px solid #2a6a40;display:block}
-.msg.error{background:#3a0f0f;color:#e06060;border:0.5px solid #6a2a2a;display:block}
+.msg.ok{background:#0f3a20;color:#5abf80;border:0.5px solid #2a6a40;display:block}
+.msg.err{background:#3a0f0f;color:#e06060;border:0.5px solid #6a2a2a;display:block}
 /* edit list */
-.edit-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#1a1a2e;border:0.5px solid #2a2a3a;border-radius:10px;margin-bottom:8px;gap:12px}
-.edit-row-info{min-width:0}
-.edit-row-name{font-size:14px;font-weight:500;color:#c8d8f8}
-.edit-row-meta{font-size:12px;color:#888;margin-top:3px}
-.edit-modal-wrap{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);z-index:200;align-items:center;justify-content:center}
-.edit-modal-wrap.open{display:flex}
-.edit-modal-box{background:#1a1a2e;border:0.5px solid #3a5a8f;border-radius:14px;padding:1.5rem;max-width:500px;width:92%;max-height:85vh;overflow-y:auto}
+.erow{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#1a1a2e;border:0.5px solid #2a2a3a;border-radius:10px;margin-bottom:8px;gap:12px}
+.erow-name{font-size:14px;font-weight:500;color:#c8d8f8}
+.erow-meta{font-size:12px;color:#666;margin-top:3px}
+.emodal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:400;align-items:center;justify-content:center}
+.emodal-bg.open{display:flex}
+.emodal-box{background:#1a1a2e;border:0.5px solid #3a5a8f;border-radius:14px;padding:1.5rem;max-width:500px;width:92%;max-height:85vh;overflow-y:auto}
 </style>
 </head>
 <body>
 
-<script>const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL_HERE';</script>
+<script>
+// ⚠️ 換成你的 Google Apps Script URL
+const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
+</script>
 
 <div class="header">
-  <h1>🌍 Pei's Travel Map</h1>
-  <span class="subtitle">2007 – present</span>
+  <h1>🌍 Pei 的旅遊地圖</h1>
+  <span class="subtitle">2007 – 至今</span>
 </div>
 
 <div class="stats">
-  <div class="stat"><div class="stat-num" id="s-countries">—</div><div class="stat-label">Countries</div></div>
-  <div class="stat"><div class="stat-num" id="s-cities">—</div><div class="stat-label">Cities</div></div>
-  <div class="stat"><div class="stat-num" id="s-trips">—</div><div class="stat-label">Trips</div></div>
-  <div class="stat"><div class="stat-num" id="s-fav">—</div><div class="stat-label">Most visited</div></div>
+  <div class="stat"><div class="stat-num" id="s-countries">—</div><div class="stat-label">個國家</div></div>
+  <div class="stat"><div class="stat-num" id="s-cities">—</div><div class="stat-label">個城市</div></div>
+  <div class="stat"><div class="stat-num" id="s-trips">—</div><div class="stat-label">次旅行</div></div>
+  <div class="stat"><div class="stat-num" id="s-fav">—</div><div class="stat-label">最常造訪</div></div>
 </div>
 
 <div class="tabs">
-  <button class="tab active" onclick="switchTab('map')">🗺 Map</button>
-  <button class="tab" onclick="switchTab('list')">📋 Countries</button>
-  <button class="tab" onclick="switchTab('add')">＋ Add Trip</button>
-  <button class="tab" onclick="switchTab('edit')">✎ Edit Records</button>
-</div>
-<div id="filter-bar" style="display:flex;gap:12px;flex-wrap:wrap;padding:0 2rem 1.5rem;align-items:center">
-  <div style="display:flex;flex-direction:column;gap:4px">
-    <label style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.5px">Year</label>
-    <select id="year-select" onchange="onFilterChange()" style="background:#1a1a2e;border:0.5px solid #333;border-radius:8px;padding:7px 32px 7px 12px;color:#e8e8f0;font-size:14px;outline:none;cursor:pointer;appearance:none;background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22><path fill=%22%23888%22 d=%22M6 8L1 3h10z%22/></svg>');background-repeat:no-repeat;background-position:right 10px center;min-width:110px">
-      <option value="all">All years</option>
-    </select>
-  </div>
-  <div style="display:flex;flex-direction:column;gap:4px">
-    <label style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.5px">Region</label>
-    <select id="region-select" onchange="onFilterChange()" style="background:#1a1a2e;border:0.5px solid #333;border-radius:8px;padding:7px 32px 7px 12px;color:#e8e8f0;font-size:14px;outline:none;cursor:pointer;appearance:none;background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22><path fill=%22%23888%22 d=%22M6 8L1 3h10z%22/></svg>');background-repeat:no-repeat;background-position:right 10px center;min-width:130px">
-      <option value="">All regions</option>
-      <option value="Asia">Asia</option>
-      <option value="Europe">Europe</option>
-      <option value="Americas">Americas</option>
-      <option value="Oceania">Oceania</option>
-      <option value="Africa">Africa</option>
-    </select>
-  </div>
-  <div id="filter-summary" style="margin-left:4px;font-size:13px;color:#888;align-self:flex-end;padding-bottom:8px"></div>
+  <button class="tab active" onclick="switchTab('map')">🗺 地圖</button>
+  <button class="tab" onclick="switchTab('list')">📋 國家列表</button>
+  <button class="tab" onclick="switchTab('add')">＋ 新增行程</button>
+  <button class="tab" onclick="switchTab('edit')">✎ 編輯紀錄</button>
 </div>
 
-<!-- MAP -->
-<div id="map-view">
-  <div id="map-container"><div id="leaflet-map"></div></div>
+<div class="filter-bar">
+  <div class="filter-group">
+    <span class="filter-label">年份</span>
+    <select class="filter-select" id="year-select" onchange="applyFilters()">
+      <option value="all">全部年份</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">地區</span>
+    <select class="filter-select" id="region-select" onchange="applyFilters()">
+      <option value="">全部地區</option>
+      <option value="Asia">亞洲</option>
+      <option value="Europe">歐洲</option>
+      <option value="Americas">美洲</option>
+      <option value="Oceania">大洋洲</option>
+      <option value="Africa">非洲</option>
+    </select>
+  </div>
+  <span class="filter-summary" id="filter-summary"></span>
 </div>
 
-<!-- LIST -->
-<div id="list-view">
+<!-- 地圖 -->
+<div id="view-map" class="view active">
+  <div id="map-wrap"><div id="leaflet-map"></div></div>
+</div>
+
+<!-- 國家列表 -->
+<div id="view-list" class="view">
   <div class="grid" id="card-grid"></div>
 </div>
 
-<!-- ADD -->
-<div id="add-view">
+<!-- 新增行程 -->
+<div id="view-add" class="view">
   <div class="form-card">
-    <div class="form-section">Trip details</div>
+    <div class="fsec">行程資訊</div>
     <div class="f2">
-      <div class="form-row"><label>Country</label><input id="f-country" placeholder="e.g. Japan"/></div>
-      <div class="form-row"><label>Region</label>
+      <div class="frow"><label>國家</label><input id="f-country" placeholder="例：日本"/></div>
+      <div class="frow"><label>地區</label>
         <select id="f-region">
-          <option value="Asia">Asia</option><option value="Europe">Europe</option>
-          <option value="Americas">Americas</option><option value="Oceania">Oceania</option>
-          <option value="Africa">Africa</option><option value="Middle East">Middle East</option>
+          <option value="Asia">亞洲</option><option value="Europe">歐洲</option>
+          <option value="Americas">美洲</option><option value="Oceania">大洋洲</option>
+          <option value="Africa">非洲</option><option value="Middle East">中東</option>
         </select>
       </div>
     </div>
     <div class="f2">
-      <div class="form-row"><label>Departure</label><input type="date" id="f-from"/></div>
-      <div class="form-row"><label>Return</label><input type="date" id="f-to"/></div>
+      <div class="frow"><label>出發日期</label><input type="date" id="f-from"/></div>
+      <div class="frow"><label>返回日期</label><input type="date" id="f-to"/></div>
     </div>
-
-    <div class="form-section">Cities visited</div>
-    <div class="form-row">
-      <label>Add each city and press Enter or click +</label>
-      <div class="cities-list" id="f-cities-list"></div>
-      <div class="city-input-row">
-        <input id="f-city-input" placeholder="e.g. Tokyo" onkeydown="if(event.key==='Enter'){event.preventDefault();addCityChip('f')}"/>
-        <button class="city-add-btn" onclick="addCityChip('f')">+ Add</button>
+    <div class="fsec">造訪城市</div>
+    <div class="frow">
+      <label>逐一新增，按 Enter 或點＋</label>
+      <div class="chips" id="f-chips"></div>
+      <div class="chip-row">
+        <input id="f-city" placeholder="例：東京" onkeydown="if(event.key==='Enter'){event.preventDefault();addChip('f')}"/>
+        <button class="chip-add" onclick="addChip('f')">＋</button>
       </div>
     </div>
-
-    <div class="form-section">Extra info <span style="color:#555;font-weight:400">(optional)</span></div>
-    <div class="form-row"><label>Travel companions</label><input id="f-companion" placeholder="e.g. Family, Friends, Solo"/></div>
-    <div class="form-row"><label>Notes</label><textarea id="f-note" rows="2" placeholder="Brief thoughts..."></textarea></div>
-
-    <div class="form-actions">
-      <button class="btn btn-primary" id="save-btn" onclick="addTrip()">Save trip</button>
-      <button class="btn btn-ghost" onclick="clearForm()">Clear</button>
+    <div class="fsec">其他（選填）</div>
+    <div class="frow"><label>同行人員</label><input id="f-companion" placeholder="例：家人、朋友、自己"/></div>
+    <div class="frow"><label>備註 / 心得</label><textarea id="f-note" rows="2" placeholder="簡短紀錄..."></textarea></div>
+    <div class="factions">
+      <button class="btn btn-p" id="f-save-btn" onclick="addTrip()">儲存行程</button>
+      <button class="btn btn-g" onclick="clearAddForm()">清除</button>
     </div>
-    <div class="msg" id="form-msg"></div>
+    <div class="msg" id="f-msg"></div>
   </div>
-  <div id="added-trips" style="max-width:540px;margin-top:1.5rem"></div>
+  <div id="f-added-list" style="max-width:540px;margin-top:1.5rem"></div>
 </div>
 
-<!-- EDIT -->
-<div id="edit-view">
-  <div style="max-width:720px">
-    <div style="display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap;align-items:center">
-      <input id="edit-search" placeholder="Search country or city…" oninput="renderEditList()"
-        style="background:#0f0f1a;border:0.5px solid #333;border-radius:8px;padding:7px 12px;color:#e8e8f0;font-size:14px;outline:none;width:220px"/>
-      <select id="edit-region-filter" onchange="renderEditList()"
-        style="background:#0f0f1a;border:0.5px solid #333;border-radius:8px;padding:7px 12px;color:#e8e8f0;font-size:14px;outline:none">
-        <option value="">All regions</option>
-        <option value="Asia">Asia</option><option value="Europe">Europe</option>
-        <option value="Americas">Americas</option><option value="Oceania">Oceania</option>
+<!-- 編輯紀錄 -->
+<div id="view-edit" class="view">
+  <div style="max-width:700px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1rem;align-items:center">
+      <input id="e-search" placeholder="搜尋國家或城市…" oninput="renderEditList()"
+        style="background:#0f0f1a;border:0.5px solid #2a2a44;border-radius:8px;padding:7px 12px;color:#e8e8f0;font-size:14px;outline:none;width:220px"/>
+      <select id="e-region-filter" onchange="renderEditList()" class="filter-select" style="min-width:120px">
+        <option value="">全部地區</option>
+        <option value="Asia">亞洲</option><option value="Europe">歐洲</option>
+        <option value="Americas">美洲</option><option value="Oceania">大洋洲</option>
       </select>
-      <span id="edit-count" style="font-size:13px;color:#888;margin-left:auto"></span>
+      <span id="e-count" style="font-size:13px;color:#666;margin-left:auto"></span>
     </div>
-    <div id="edit-list"></div>
-  </div>
-
-  <!-- edit modal -->
-  <div class="edit-modal-wrap" id="edit-modal">
-    <div class="edit-modal-box">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
-        <span style="font-size:16px;font-weight:500;color:#c8d8f8">Edit trip</span>
-        <button onclick="closeEditModal()" style="background:transparent;border:none;color:#888;font-size:20px;cursor:pointer">✕</button>
-      </div>
-      <div class="f2">
-        <div class="form-row"><label>Country</label><input id="e-country"/></div>
-        <div class="form-row"><label>Region</label>
-          <select id="e-region">
-            <option value="Asia">Asia</option><option value="Europe">Europe</option>
-            <option value="Americas">Americas</option><option value="Oceania">Oceania</option>
-            <option value="Africa">Africa</option><option value="Middle East">Middle East</option>
-          </select>
-        </div>
-      </div>
-      <div class="f2">
-        <div class="form-row"><label>Departure</label><input type="date" id="e-from"/></div>
-        <div class="form-row"><label>Return</label><input type="date" id="e-to"/></div>
-      </div>
-      <div class="form-row">
-        <label>Cities visited</label>
-        <div class="cities-list" id="e-cities-list"></div>
-        <div class="city-input-row">
-          <input id="e-city-input" placeholder="Add city…" onkeydown="if(event.key==='Enter'){event.preventDefault();addCityChip('e')}"/>
-          <button class="city-add-btn" onclick="addCityChip('e')">+ Add</button>
-        </div>
-      </div>
-      <div class="form-row"><label>Companions</label><input id="e-companion"/></div>
-      <div class="form-row"><label>Notes</label><textarea id="e-note" rows="2"></textarea></div>
-      <div style="display:flex;gap:10px;margin-top:1.25rem;align-items:center">
-        <button class="btn btn-primary" onclick="saveEdit()">Save changes</button>
-        <button class="btn btn-ghost" onclick="closeEditModal()">Cancel</button>
-        <button class="btn btn-danger" style="margin-left:auto" onclick="deleteEdit()">Delete</button>
-      </div>
-      <div class="msg" id="edit-msg"></div>
-    </div>
+    <div id="e-list"></div>
   </div>
 </div>
 
-<!-- COUNTRY MODAL -->
-<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+<!-- 國家 modal -->
+<div class="modal-bg" id="country-modal" onclick="if(event.target===this)closeCountryModal()">
   <div class="modal-box">
-    <div class="modal-header">
+    <div class="modal-hd">
       <span class="modal-flag" id="m-flag"></span>
       <div><div class="modal-title" id="m-name"></div><div class="modal-sub" id="m-sub"></div></div>
-      <button class="modal-close" onclick="closeModal()">✕</button>
+      <button class="modal-close" onclick="closeCountryModal()">✕</button>
     </div>
-    <div id="m-trips"></div>
+    <div id="m-body"></div>
+  </div>
+</div>
+
+<!-- 編輯 modal -->
+<div class="emodal-bg" id="edit-modal" onclick="if(event.target===this)closeEditModal()">
+  <div class="emodal-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
+      <span style="font-size:16px;font-weight:500;color:#c8d8f8">編輯行程</span>
+      <button onclick="closeEditModal()" style="background:transparent;border:none;color:#666;font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <div class="f2">
+      <div class="frow"><label>國家</label><input id="e-country"/></div>
+      <div class="frow"><label>地區</label>
+        <select id="e-region">
+          <option value="Asia">亞洲</option><option value="Europe">歐洲</option>
+          <option value="Americas">美洲</option><option value="Oceania">大洋洲</option>
+          <option value="Africa">非洲</option><option value="Middle East">中東</option>
+        </select>
+      </div>
+    </div>
+    <div class="f2">
+      <div class="frow"><label>出發日期</label><input type="date" id="e-from"/></div>
+      <div class="frow"><label>返回日期</label><input type="date" id="e-to"/></div>
+    </div>
+    <div class="frow">
+      <label>造訪城市</label>
+      <div class="chips" id="e-chips"></div>
+      <div class="chip-row">
+        <input id="e-city" placeholder="新增城市…" onkeydown="if(event.key==='Enter'){event.preventDefault();addChip('e')}"/>
+        <button class="chip-add" onclick="addChip('e')">＋</button>
+      </div>
+    </div>
+    <div class="frow"><label>同行人員</label><input id="e-companion"/></div>
+    <div class="frow"><label>備註 / 心得</label><textarea id="e-note" rows="2"></textarea></div>
+    <div style="display:flex;gap:10px;margin-top:1.25rem;align-items:center">
+      <button class="btn btn-p" onclick="saveEdit()">儲存變更</button>
+      <button class="btn btn-g" onclick="closeEditModal()">取消</button>
+      <button class="btn btn-d" style="margin-left:auto" onclick="deleteEdit()">刪除</button>
+    </div>
+    <div class="msg" id="e-msg"></div>
   </div>
 </div>
 
 <script>
-// ── Data ─────────────────────────────────────────────────────
-// Each entry = one TRIP (may have multiple cities, stored as array)
-const BASE_TRIPS = [
-  {country:"Hong Kong",cities:["Hong Kong"],region:"Asia",from:"2007-10-26",to:"2007-10-28",companion:"Family (Mum, Brother)"},
-  {country:"China",cities:["Beijing"],region:"Asia",from:"2011-01-05",to:"2011-01-09",companion:"Family (Mum, Brother, Dad)"},
-  {country:"Japan",cities:["Tokyo"],region:"Asia",from:"2014-08-22",to:"2014-08-26",companion:"Solo"},
-  {country:"South Korea",cities:["Seoul"],region:"Asia",from:"2016-07-06",to:"2016-07-18",companion:"Friend (Shihan)"},
-  {country:"China",cities:["Wenzhou"],region:"Asia",from:"2017-07-26",to:"2017-07-30",companion:"Family (Mum, Brother, Dad)"},
-  {country:"Singapore",cities:["Singapore"],region:"Asia",from:"2017-08-27",to:"2017-08-28",companion:"Family (Brother)"},
-  {country:"United Kingdom",cities:["London"],region:"Europe",from:"2017-08-28",to:"2017-09-11",companion:"Family (Brother)"},
-  {country:"Japan",cities:["Osaka","Kyoto"],region:"Asia",from:"2018-02-21",to:"2018-02-25",companion:"Family (Mum, Dad)"},
-  {country:"South Korea",cities:["Seoul"],region:"Asia",from:"2018-08-26",to:"2018-09-04",companion:"Family (Brother)"},
-  {country:"Japan",cities:["Hokkaido"],region:"Asia",from:"2019-02-09",to:"2019-02-13",companion:"Family (Mum, Brother, Dad)"},
-  {country:"South Korea",cities:["Seoul"],region:"Asia",from:"2019-06-06",to:"2019-06-09",companion:"Family (Mum, Brother, Dad)"},
-  {country:"Singapore",cities:["Singapore"],region:"Asia",from:"2019-09-02",to:"2019-09-07",companion:"Solo"},
-  {country:"Japan",cities:["Osaka","Kyoto"],region:"Asia",from:"2020-01-29",to:"2020-02-04",companion:"Family (Mum, Brother, Dad)"},
-  {country:"Thailand",cities:["Bangkok"],region:"Asia",from:"2023-06-22",to:"2023-06-27",companion:"Friends"},
-  {country:"Japan",cities:["Tokyo"],region:"Asia",from:"2023-08-26",to:"2023-08-30",companion:"Family (Mum)"},
-  {country:"Spain",cities:["Barcelona","Madrid","Tossa de Mar"],region:"Europe",from:"2023-10-28",to:"2023-11-01"},
-  {country:"Portugal",cities:["Porto","Lisbon"],region:"Europe",from:"2023-11-01",to:"2023-11-04"},
-  {country:"Netherlands",cities:["Amsterdam","The Hague","Rotterdam"],region:"Europe",from:"2023-12-16",to:"2023-12-19"},
-  {country:"France",cities:["Paris"],region:"Europe",from:"2023-12-22",to:"2023-12-27"},
-  {country:"Italy",cities:["Milan"],region:"Europe",from:"2024-01-13",to:"2024-01-15"},
-  {country:"Netherlands",cities:["Amsterdam"],region:"Europe",from:"2024-01-16",to:"2024-01-20"},
-  {country:"Belgium",cities:["Brussels"],region:"Europe",from:"2024-01-19",to:"2024-01-19"},
-  {country:"Iceland",cities:["Reykjavik"],region:"Europe",from:"2024-01-21",to:"2024-01-23"},
-  {country:"Romania",cities:["Bucharest"],region:"Europe",from:"2024-01-26",to:"2024-01-28"},
-  {country:"Hungary",cities:["Budapest"],region:"Europe",from:"2024-02-03",to:"2024-02-05"},
-  {country:"Ireland",cities:["Dublin"],region:"Europe",from:"2024-02-17",to:"2024-02-19"},
-  {country:"France",cities:["Lyon"],region:"Europe",from:"2024-03-01",to:"2024-03-03"},
-  {country:"Italy",cities:["Venice"],region:"Europe",from:"2024-05-08",to:"2024-05-10"},
-  {country:"Sweden",cities:["Malmö"],region:"Europe",from:"2024-05-13",to:"2024-05-13"},
-  {country:"Denmark",cities:["Copenhagen"],region:"Europe",from:"2024-05-13",to:"2024-05-15"},
-  {country:"Germany",cities:["Berlin"],region:"Europe",from:"2024-05-15",to:"2024-05-18"},
-  {country:"Poland",cities:["Kraków"],region:"Europe",from:"2024-06-06",to:"2024-06-11"},
-  {country:"Austria",cities:["Vienna"],region:"Europe",from:"2024-06-11",to:"2024-06-14"},
-  {country:"Slovakia",cities:["Bratislava"],region:"Europe",from:"2024-06-12",to:"2024-06-12"},
-  {country:"Czech Republic",cities:["Prague","Karlovy Vary"],region:"Europe",from:"2024-06-14",to:"2024-06-18"},
-  {country:"Greece",cities:["Athens","Santorini"],region:"Europe",from:"2024-06-26",to:"2024-07-01"},
-  {country:"South Korea",cities:["Seoul"],region:"Asia",from:"2024-09-11",to:"2024-09-16"},
-  {country:"Austria",cities:["Vienna","Hallstatt","Salzburg"],region:"Europe",from:"2024-10-16",to:"2024-10-24"},
-  {country:"Hungary",cities:["Budapest"],region:"Europe",from:"2024-10-18",to:"2024-10-20",companion:"Family (Mum)"},
-  {country:"Slovakia",cities:["Bratislava"],region:"Europe",from:"2024-10-21",to:"2024-10-21"},
-  {country:"Czech Republic",cities:["Český Krumlov","Prague"],region:"Europe",from:"2024-10-24",to:"2024-10-27"},
-  {country:"Ireland",cities:["Dublin"],region:"Europe",from:"2024-12-03",to:"2024-12-03",companion:"Solo"},
-  {country:"Sweden",cities:["Stockholm"],region:"Europe",from:"2025-01-16",to:"2025-01-18"},
-  {country:"Spain",cities:["Palma de Mallorca"],region:"Europe",from:"2025-06-03",to:"2025-06-06"},
-  {country:"Germany",cities:["Hamburg"],region:"Europe",from:"2025-06-17",to:"2025-06-19"},
-  {country:"Netherlands",cities:["Eindhoven"],region:"Europe",from:"2025-09-05",to:"2025-09-06"},
-  {country:"Belgium",cities:["Bruges","Ghent","Brussels"],region:"Europe",from:"2025-09-06",to:"2025-09-09"},
-  {country:"Luxembourg",cities:["Luxembourg City"],region:"Europe",from:"2025-09-09",to:"2025-09-09"},
-  {country:"France",cities:["Paris"],region:"Europe",from:"2025-09-19",to:"2025-09-22"},
-  {country:"Spain",cities:["Barcelona"],region:"Europe",from:"2025-10-06",to:"2025-10-09"},
-  {country:"Italy",cities:["Rome"],region:"Europe",from:"2026-01-11",to:"2026-01-14"},
-  {country:"South Korea",cities:["Seoul","Busan"],region:"Asia",from:"2026-03-01",to:"2026-03-07"},
-  {country:"Spain",cities:["Madrid"],region:"Europe",from:"2026-03-14",to:"2026-03-16"},
-  {country:"Netherlands",cities:["Rotterdam"],region:"Europe",from:"2026-06-28",to:"2026-07-01"},
+// ── 資料 ──────────────────────────────────────────────────────
+const BASE = [
+  {c:"香港",cities:["香港"],r:"Asia",f:"2007-10-26",t:"2007-10-28",who:"家人（媽媽、哥哥）"},
+  {c:"中國",cities:["北京"],r:"Asia",f:"2011-01-05",t:"2011-01-09",who:"家人（媽媽、哥哥、爸爸）"},
+  {c:"日本",cities:["東京"],r:"Asia",f:"2014-08-22",t:"2014-08-26",who:"自己"},
+  {c:"韓國",cities:["首爾"],r:"Asia",f:"2016-07-06",t:"2016-07-18",who:"朋友（黃詩涵）"},
+  {c:"中國",cities:["溫州"],r:"Asia",f:"2017-07-26",t:"2017-07-30",who:"家人（媽媽、哥哥、爸爸）"},
+  {c:"新加坡",cities:["新加坡"],r:"Asia",f:"2017-08-27",t:"2017-08-28",who:"家人（哥哥）"},
+  {c:"英國",cities:["倫敦"],r:"Europe",f:"2017-08-28",t:"2017-09-11",who:"家人（哥哥）"},
+  {c:"日本",cities:["大阪","京都"],r:"Asia",f:"2018-02-21",t:"2018-02-25",who:"家人（媽媽、爸爸）"},
+  {c:"韓國",cities:["首爾"],r:"Asia",f:"2018-08-26",t:"2018-09-04",who:"家人（哥哥）"},
+  {c:"日本",cities:["北海道"],r:"Asia",f:"2019-02-09",t:"2019-02-13",who:"家人（媽媽、哥哥、爸爸）"},
+  {c:"韓國",cities:["首爾"],r:"Asia",f:"2019-06-06",t:"2019-06-09",who:"家人（媽媽、哥哥、爸爸）"},
+  {c:"新加坡",cities:["新加坡"],r:"Asia",f:"2019-09-02",t:"2019-09-07",who:"自己"},
+  {c:"日本",cities:["大阪","京都"],r:"Asia",f:"2020-01-29",t:"2020-02-04",who:"家人（媽媽、哥哥、爸爸）"},
+  {c:"泰國",cities:["曼谷"],r:"Asia",f:"2023-06-22",t:"2023-06-27",who:"朋友"},
+  {c:"日本",cities:["東京"],r:"Asia",f:"2023-08-26",t:"2023-08-30",who:"家人（媽媽）"},
+  {c:"西班牙",cities:["巴塞隆納","馬德里","Tossa de Mar"],r:"Europe",f:"2023-10-28",t:"2023-11-01"},
+  {c:"葡萄牙",cities:["波多","里斯本"],r:"Europe",f:"2023-11-01",t:"2023-11-04"},
+  {c:"荷蘭",cities:["阿姆斯特丹","海牙","鹿特丹"],r:"Europe",f:"2023-12-16",t:"2023-12-19"},
+  {c:"法國",cities:["巴黎"],r:"Europe",f:"2023-12-22",t:"2023-12-27"},
+  {c:"義大利",cities:["米蘭"],r:"Europe",f:"2024-01-13",t:"2024-01-15"},
+  {c:"荷蘭",cities:["阿姆斯特丹"],r:"Europe",f:"2024-01-16",t:"2024-01-20"},
+  {c:"比利時",cities:["布魯塞爾"],r:"Europe",f:"2024-01-19",t:"2024-01-19"},
+  {c:"冰島",cities:["雷克雅維克"],r:"Europe",f:"2024-01-21",t:"2024-01-23"},
+  {c:"羅馬尼亞",cities:["布加勒斯特"],r:"Europe",f:"2024-01-26",t:"2024-01-28"},
+  {c:"匈牙利",cities:["布達佩斯"],r:"Europe",f:"2024-02-03",t:"2024-02-05"},
+  {c:"愛爾蘭",cities:["都柏林"],r:"Europe",f:"2024-02-17",t:"2024-02-19"},
+  {c:"法國",cities:["里昂"],r:"Europe",f:"2024-03-01",t:"2024-03-03"},
+  {c:"義大利",cities:["威尼斯"],r:"Europe",f:"2024-05-08",t:"2024-05-10"},
+  {c:"瑞典",cities:["馬爾默"],r:"Europe",f:"2024-05-13",t:"2024-05-13"},
+  {c:"丹麥",cities:["哥本哈根"],r:"Europe",f:"2024-05-13",t:"2024-05-15"},
+  {c:"德國",cities:["柏林"],r:"Europe",f:"2024-05-15",t:"2024-05-18"},
+  {c:"波蘭",cities:["克拉科夫"],r:"Europe",f:"2024-06-06",t:"2024-06-11"},
+  {c:"奧地利",cities:["維也納"],r:"Europe",f:"2024-06-11",t:"2024-06-14"},
+  {c:"斯洛伐克",cities:["布拉提斯拉瓦"],r:"Europe",f:"2024-06-12",t:"2024-06-12"},
+  {c:"捷克",cities:["布拉格","卡羅維瓦里"],r:"Europe",f:"2024-06-14",t:"2024-06-18"},
+  {c:"希臘",cities:["雅典","聖托里尼"],r:"Europe",f:"2024-06-26",t:"2024-07-01"},
+  {c:"韓國",cities:["首爾"],r:"Asia",f:"2024-09-11",t:"2024-09-16"},
+  {c:"奧地利",cities:["維也納","哈修施塔特","薩爾斯堡"],r:"Europe",f:"2024-10-16",t:"2024-10-24"},
+  {c:"匈牙利",cities:["布達佩斯"],r:"Europe",f:"2024-10-18",t:"2024-10-20",who:"家人（媽媽）"},
+  {c:"斯洛伐克",cities:["布拉提斯拉瓦"],r:"Europe",f:"2024-10-21",t:"2024-10-21"},
+  {c:"捷克",cities:["捷克克魯姆洛夫","布拉格"],r:"Europe",f:"2024-10-24",t:"2024-10-27"},
+  {c:"愛爾蘭",cities:["都柏林"],r:"Europe",f:"2024-12-03",t:"2024-12-03",who:"自己"},
+  {c:"瑞典",cities:["斯德哥爾摩"],r:"Europe",f:"2025-01-16",t:"2025-01-18"},
+  {c:"西班牙",cities:["帕爾馬"],r:"Europe",f:"2025-06-03",t:"2025-06-06"},
+  {c:"德國",cities:["漢堡"],r:"Europe",f:"2025-06-17",t:"2025-06-19"},
+  {c:"荷蘭",cities:["埃因霍溫"],r:"Europe",f:"2025-09-05",t:"2025-09-06"},
+  {c:"比利時",cities:["布魯日","根特","布魯塞爾"],r:"Europe",f:"2025-09-06",t:"2025-09-09"},
+  {c:"盧森堡",cities:["盧森堡市"],r:"Europe",f:"2025-09-09",t:"2025-09-09"},
+  {c:"法國",cities:["巴黎"],r:"Europe",f:"2025-09-19",t:"2025-09-22"},
+  {c:"西班牙",cities:["巴塞隆納"],r:"Europe",f:"2025-10-06",t:"2025-10-09"},
+  {c:"義大利",cities:["羅馬"],r:"Europe",f:"2026-01-11",t:"2026-01-14"},
+  {c:"韓國",cities:["首爾","釜山"],r:"Asia",f:"2026-03-01",t:"2026-03-07"},
+  {c:"西班牙",cities:["馬德里"],r:"Europe",f:"2026-03-14",t:"2026-03-16"},
+  {c:"荷蘭",cities:["鹿特丹"],r:"Europe",f:"2026-06-28",t:"2026-07-01"},
 ];
 
-const FLAGS = {
-  "Hong Kong":"🇭🇰","China":"🇨🇳","Japan":"🇯🇵","South Korea":"🇰🇷","Singapore":"🇸🇬",
-  "United Kingdom":"🇬🇧","Thailand":"🇹🇭","Spain":"🇪🇸","Portugal":"🇵🇹","Netherlands":"🇳🇱",
-  "France":"🇫🇷","Italy":"🇮🇹","Belgium":"🇧🇪","Iceland":"🇮🇸","Romania":"🇷🇴","Hungary":"🇭🇺",
-  "Ireland":"🇮🇪","Sweden":"🇸🇪","Denmark":"🇩🇰","Germany":"🇩🇪","Poland":"🇵🇱","Austria":"🇦🇹",
-  "Slovakia":"🇸🇰","Czech Republic":"🇨🇿","Greece":"🇬🇷","Luxembourg":"🇱🇺","USA":"🇺🇸",
-  "Canada":"🇨🇦","Australia":"🇦🇺","New Zealand":"🇳🇿","India":"🇮🇳","Vietnam":"🇻🇳",
-  "Indonesia":"🇮🇩","Malaysia":"🇲🇾","Taiwan":"🇹🇼","Philippines":"🇵🇭","Turkey":"🇹🇷",
-  "Morocco":"🇲🇦","South Africa":"🇿🇦","Brazil":"🇧🇷","Norway":"🇳🇴","Finland":"🇫🇮",
-  "Switzerland":"🇨🇭","Croatia":"🇭🇷","Serbia":"🇷🇸","Mexico":"🇲🇽","Argentina":"🇦🇷",
-};
+const FLAGS = {"香港":"🇭🇰","中國":"🇨🇳","日本":"🇯🇵","韓國":"🇰🇷","新加坡":"🇸🇬","英國":"🇬🇧","泰國":"🇹🇭","西班牙":"🇪🇸","葡萄牙":"🇵🇹","荷蘭":"🇳🇱","法國":"🇫🇷","義大利":"🇮🇹","比利時":"🇧🇪","冰島":"🇮🇸","羅馬尼亞":"🇷🇴","匈牙利":"🇭🇺","愛爾蘭":"🇮🇪","瑞典":"🇸🇪","丹麥":"🇩🇰","德國":"🇩🇪","波蘭":"🇵🇱","奧地利":"🇦🇹","斯洛伐克":"🇸🇰","捷克":"🇨🇿","希臘":"🇬🇷","盧森堡":"🇱🇺","美國":"🇺🇸","加拿大":"🇨🇦","澳洲":"🇦🇺","紐西蘭":"🇳🇿","印度":"🇮🇳","越南":"🇻🇳","馬來西亞":"🇲🇾","台灣":"🇹🇼","菲律賓":"🇵🇭","土耳其":"🇹🇷","摩洛哥":"🇲🇦","南非":"🇿🇦","巴西":"🇧🇷","挪威":"🇳🇴","芬蘭":"🇫🇮","瑞士":"🇨🇭","克羅埃西亞":"🇭🇷"};
 
-const countryToISO = {
-  "Hong Kong":"HK","China":"CN","Japan":"JP","South Korea":"KR","Singapore":"SG",
-  "United Kingdom":"GB","Thailand":"TH","Spain":"ES","Portugal":"PT","Netherlands":"NL",
-  "France":"FR","Italy":"IT","Belgium":"BE","Iceland":"IS","Romania":"RO","Hungary":"HU",
-  "Ireland":"IE","Sweden":"SE","Denmark":"DK","Germany":"DE","Poland":"PL","Austria":"AT",
-  "Slovakia":"SK","Czech Republic":"CZ","Greece":"GR","Luxembourg":"LU","USA":"US",
-  "Canada":"CA","Australia":"AU","New Zealand":"NZ","India":"IN","Vietnam":"VN",
-  "Indonesia":"ID","Malaysia":"MY","Taiwan":"TW","Philippines":"PH","Turkey":"TR",
-  "Morocco":"MA","South Africa":"ZA","Brazil":"BR","Norway":"NO","Finland":"FI",
-  "Switzerland":"CH","Croatia":"HR","Serbia":"RS","Mexico":"MX","Argentina":"AR",
-};
-const isoNumToAlpha2 = {
-  392:"JP",410:"KR",156:"CN",702:"SG",764:"TH",344:"HK",826:"GB",724:"ES",620:"PT",
-  528:"NL",250:"FR",380:"IT",56:"BE",352:"IS",642:"RO",348:"HU",372:"IE",752:"SE",
-  208:"DK",276:"DE",616:"PL",40:"AT",703:"SK",203:"CZ",300:"GR",442:"LU",840:"US",
-  124:"CA",36:"AU",554:"NZ",356:"IN",704:"VN",360:"ID",458:"MY",158:"TW",608:"PH",
-  792:"TR",504:"MA",710:"ZA",76:"BR",578:"NO",246:"FI",756:"CH",191:"HR",688:"RS",
-  484:"MX",32:"AR",
-};
-const isoToCountry = {};
-Object.entries(countryToISO).forEach(([k,v])=>isoToCountry[v]=k);
+// ISO mapping for map colouring
+const NAME_TO_ISO = {"香港":"HK","中國":"CN","日本":"JP","韓國":"KR","新加坡":"SG","英國":"GB","泰國":"TH","西班牙":"ES","葡萄牙":"PT","荷蘭":"NL","法國":"FR","義大利":"IT","比利時":"BE","冰島":"IS","羅馬尼亞":"RO","匈牙利":"HU","愛爾蘭":"IE","瑞典":"SE","丹麥":"DK","德國":"DE","波蘭":"PL","奧地利":"AT","斯洛伐克":"SK","捷克":"CZ","希臘":"GR","盧森堡":"LU","美國":"US","加拿大":"CA","澳洲":"AU","紐西蘭":"NZ","印度":"IN","越南":"VN","馬來西亞":"MY","台灣":"TW","菲律賓":"PH","土耳其":"TR","摩洛哥":"MA","南非":"ZA","巴西":"BR","挪威":"NO","芬蘭":"FI","瑞士":"CH","克羅埃西亞":"HR"};
+const ISO_NUM = {392:"JP",410:"KR",156:"CN",702:"SG",764:"TH",344:"HK",826:"GB",724:"ES",620:"PT",528:"NL",250:"FR",380:"IT",56:"BE",352:"IS",642:"RO",348:"HU",372:"IE",752:"SE",208:"DK",276:"DE",616:"PL",40:"AT",703:"SK",203:"CZ",300:"GR",442:"LU",840:"US",124:"CA",36:"AU",554:"NZ",356:"IN",704:"VN",458:"MY",158:"TW",608:"PH",792:"TR",504:"MA",710:"ZA",76:"BR",578:"NO",246:"FI",756:"CH",191:"HR"};
+const ISO_TO_NAME = {};
+Object.entries(NAME_TO_ISO).forEach(([k,v]) => ISO_TO_NAME[v] = k);
 
-let addedTrips = [];
-let allTrips = [];
-let byCountry = {};
+const REGION_ZH = {Asia:"亞洲",Europe:"歐洲",Americas:"美洲",Oceania:"大洋洲",Africa:"非洲","Middle East":"中東"};
+
+// ── State ─────────────────────────────────────────────────────
+let added = [];       // user-added / overrides / deletes
+let allTrips = [];    // merged visible trips
+let byCountry = {};   // grouped by country name
+let chipBuf = {f:[], e:[]};
+let editTarget = null;
 
 // ── Storage ───────────────────────────────────────────────────
-const STORAGE_KEY = 'pei_travel_trips_v2';
-async function fetchAdded() {
-  if (!APPS_SCRIPT_URL||APPS_SCRIPT_URL==='YOUR_APPS_SCRIPT_URL_HERE') return;
+async function loadAdded() {
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') return;
   try {
-    const r = await fetch(APPS_SCRIPT_URL);
-    const json = await r.json();
-    addedTrips = (json.data||[]).map(d=>({
+    const res = await fetch(APPS_SCRIPT_URL);
+    const json = await res.json();
+    added = (json.data || []).map(d => ({
       ...d,
-      cities: typeof d.cities==='string' ? JSON.parse(d.cities||'[]') : (d.cities||[]),
-      isNew: !d.__overrideIdx && !d.__deleted,
+      cities: typeof d.cities === 'string' ? JSON.parse(d.cities || '[]') : (d.cities || []),
     }));
-  } catch(e){ console.error(e); }
+  } catch(e) { console.warn('無法讀取雲端資料:', e); }
 }
+
 async function saveAdded() {
-  if (!APPS_SCRIPT_URL||APPS_SCRIPT_URL==='YOUR_APPS_SCRIPT_URL_HERE') return;
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') return;
   try {
-    await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'set_all',data:addedTrips})});
-  } catch(e){ console.error(e); }
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'set_all', data: added })
+    });
+  } catch(e) { console.warn('儲存失敗:', e); }
 }
 
-// ── Core ──────────────────────────────────────────────────────
+// ── Rebuild ───────────────────────────────────────────────────
 function rebuild() {
-  BASE_TRIPS.forEach(t=>{ t.__hidden=false; });
-  addedTrips.forEach(a=>{
-    if (a.__deleted && a.targetIdx != null) {
-      if (BASE_TRIPS[a.targetIdx]) BASE_TRIPS[a.targetIdx].__hidden=true;
-    }
-    if (a.__overrideIdx != null) {
-      if (BASE_TRIPS[a.__overrideIdx]) BASE_TRIPS[a.__overrideIdx].__hidden=true;
-    }
+  // reset base
+  BASE.forEach(b => { b._hidden = false; });
+
+  // apply deletes & overrides
+  added.forEach(a => {
+    if (a._del && a._idx != null && BASE[a._idx]) BASE[a._idx]._hidden = true;
+    if (a._ov != null && BASE[a._ov]) BASE[a._ov]._hidden = true;
   });
-  const visibleAdded = addedTrips.filter(t=>!t.__deleted);
-  allTrips = [...BASE_TRIPS.filter(t=>!t.__hidden), ...visibleAdded]
-    .sort((a,b)=>a.from.localeCompare(b.from));
+
+  const visAdded = added.filter(a => !a._del);
+  allTrips = [...BASE.filter(b => !b._hidden), ...visAdded]
+    .sort((a, b) => a.f.localeCompare(b.f));
+
   byCountry = {};
-  allTrips.forEach(t=>{
-    if (!byCountry[t.country]) byCountry[t.country]={trips:[],region:t.region};
-    byCountry[t.country].trips.push(t);
+  allTrips.forEach(t => {
+    if (!byCountry[t.c]) byCountry[t.c] = { trips: [], r: t.r };
+    byCountry[t.c].trips.push(t);
   });
-  buildYearDropdown();
-  updateFilterSummary();
-  updateStats();
-  redrawMap();
+
+  refreshYearSelect();
+  applyFilters();   // updates stats, map, current view
 }
 
-function fmtDate(s){
-  const d=new Date(s);
-  return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+function refreshYearSelect() {
+  const sel = document.getElementById('year-select');
+  const cur = sel.value;
+  const years = [...new Set(allTrips.map(t => new Date(t.f).getFullYear()))].sort();
+  sel.innerHTML = '<option value="all">全部年份</option>' +
+    years.map(y => `<option value="${y}"${String(cur)===String(y)?' selected':''}>${y}</option>`).join('');
 }
-function getDays(from,to){ return Math.max(1,Math.round((new Date(to)-new Date(from))/86400000)); }
 
-function updateStats(){
-  const ft = filteredTrips();
-  const cs = [...new Set(ft.map(t=>t.country))];
-  const tripCounts = {};
-  ft.forEach(t=>{ tripCounts[t.country]=(tripCounts[t.country]||0)+1; });
-  const fav = cs.length ? cs.reduce((a,b)=>(tripCounts[a]||0)>=(tripCounts[b]||0)?a:b) : '—';
-  document.getElementById('s-countries').textContent = cs.length||'—';
-  document.getElementById('s-cities').textContent = new Set(ft.flatMap(t=>t.cities||[])).size||'—';
-  document.getElementById('s-trips').textContent = ft.length||'—';
-  document.getElementById('s-fav').textContent = fav==='—'?'—':(FLAGS[fav]||'')+' '+fav;
-  document.querySelector('.stat-label:last-of-type');
-  // update stat label to reflect year
-  document.querySelectorAll('.stat-label')[3].textContent = activeYear==='all'?'Most visited':'Most visited';
+// ── Filters ───────────────────────────────────────────────────
+function getFiltered() {
+  const yr = document.getElementById('year-select').value;
+  const reg = document.getElementById('region-select').value;
+  return allTrips.filter(t => {
+    const yOk = yr === 'all' || new Date(t.f).getFullYear() == yr;
+    const rOk = !reg || t.r === reg;
+    return yOk && rOk;
+  });
+}
+
+function applyFilters() {
+  const ft = getFiltered();
+  updateStats(ft);
+  updateMapColors(ft);
+
+  const activeTab = document.querySelector('.view.active')?.id;
+  if (activeTab === 'view-list') renderCards(ft);
+  if (activeTab === 'view-edit') renderEditList();
+
+  // summary
+  const yr = document.getElementById('year-select').value;
+  const reg = document.getElementById('region-select').value;
+  const parts = [];
+  if (yr !== 'all') parts.push(yr + ' 年');
+  if (reg) parts.push(REGION_ZH[reg] || reg);
+  document.getElementById('filter-summary').textContent =
+    ft.length + ' 次旅行' + (parts.length ? '（' + parts.join('、') + '）' : '');
+}
+
+// ── Stats ─────────────────────────────────────────────────────
+function updateStats(ft) {
+  const countries = [...new Set(ft.map(t => t.c))];
+  const cities = [...new Set(ft.flatMap(t => t.cities || []))];
+  const cnt = {};
+  ft.forEach(t => cnt[t.c] = (cnt[t.c] || 0) + 1);
+  const fav = countries.length ? countries.reduce((a,b) => (cnt[a]||0) >= (cnt[b]||0) ? a : b) : null;
+  document.getElementById('s-countries').textContent = countries.length || '—';
+  document.getElementById('s-cities').textContent = cities.length || '—';
+  document.getElementById('s-trips').textContent = ft.length || '—';
+  document.getElementById('s-fav').textContent = fav ? (FLAGS[fav]||'') + ' ' + fav : '—';
 }
 
 // ── Tabs ──────────────────────────────────────────────────────
-function switchTab(tab){
-  ['map','list','add','edit'].forEach((t,i)=>{
-    document.querySelectorAll('.tab')[i].classList.toggle('active',t===tab);
-    document.getElementById(t+'-view').style.display=t===tab?'block':'none';
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((el,i) => {
+    el.classList.toggle('active', ['map','list','add','edit'][i] === tab);
   });
-  if(tab==='list') renderCards();
-  if(tab==='add') renderAddedList();
-  if(tab==='edit') renderEditList();
-  if(tab==='map') setTimeout(()=>{initMap();if(leafletMap)leafletMap.invalidateSize();},50);
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-' + tab).classList.add('active');
+
+  const ft = getFiltered();
+  if (tab === 'map') { setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); updateMapColors(ft); }, 50); }
+  if (tab === 'list') renderCards(ft);
+  if (tab === 'add') renderAddedList();
+  if (tab === 'edit') renderEditList();
 }
 
-// ── List / Cards ──────────────────────────────────────────────
-function filterRegion(r,el){
-  document.querySelectorAll('.rf').forEach(e=>e.classList.remove('active'));
-  el.classList.add('active'); renderCards(r);
-}
-function renderCards(){
-  const ft = filteredTrips();
+// ── Cards ─────────────────────────────────────────────────────
+function renderCards(ft) {
   const grid = document.getElementById('card-grid');
-  grid.innerHTML = '';
-  const countries = [...new Set(ft.map(t=>t.country))];
+  const countries = [...new Set(ft.map(t => t.c))];
   if (!countries.length) {
-    grid.innerHTML = `<p style="color:#888;font-size:13px;grid-column:1/-1">No trips found for this filter.</p>`;
+    grid.innerHTML = '<p style="color:#666;font-size:13px;grid-column:1/-1">此篩選條件無符合的紀錄。</p>';
     return;
   }
-  countries.forEach(c => {
-    const trips = ft.filter(t=>t.country===c);
-    const years = [...new Set(trips.map(t=>new Date(t.from).getFullYear()))].sort();
-    const allCities = [...new Set(trips.flatMap(t=>t.cities||[]))];
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.innerHTML = `
-      <div class="card-flag">${FLAGS[c]||'🌍'}</div>
-      <div class="card-name">${c}</div>
-      <div class="card-meta">${byCountry[c].region} · ${trips.length} trip${trips.length>1?'s':''}<br>${years.join(', ')}</div>
-      <span class="pill">${allCities.length} cit${allCities.length>1?'ies':'y'}</span>`;
-    card.onclick = () => openModal(c);
-    grid.appendChild(card);
+  grid.innerHTML = '';
+  countries.forEach(country => {
+    const trips = ft.filter(t => t.c === country);
+    const years = [...new Set(trips.map(t => new Date(t.f).getFullYear()))].sort();
+    const cities = [...new Set(trips.flatMap(t => t.cities || []))];
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `
+      <div class="card-flag">${FLAGS[country]||'🌍'}</div>
+      <div class="card-name">${country}</div>
+      <div class="card-meta">${REGION_ZH[byCountry[country]?.r]||''} · ${trips.length} 次<br>${years.join('、')} 年</div>
+      <span class="pill">${cities.length} 個城市</span>`;
+    div.onclick = () => openCountryModal(country);
+    grid.appendChild(div);
   });
 }
 
-// ── Modal ─────────────────────────────────────────────────────
-function openModal(c){
-  const trips = filteredTrips().filter(t=>t.country===c);
-  document.getElementById('m-flag').textContent=FLAGS[c]||'🌍';
-  document.getElementById('m-name').textContent=c;
-  document.getElementById('m-sub').textContent=`${byCountry[c].region} · ${trips.length} trip${trips.length>1?'s':''}${activeYear!=='all'?' in '+activeYear:''}`;
-  const html=trips.map(t=>`
+// ── Country modal ─────────────────────────────────────────────
+function openCountryModal(country) {
+  const ft = getFiltered().filter(t => t.c === country);
+  document.getElementById('m-flag').textContent = FLAGS[country] || '🌍';
+  document.getElementById('m-name').textContent = country;
+  const yr = document.getElementById('year-select').value;
+  document.getElementById('m-sub').textContent =
+    (REGION_ZH[byCountry[country]?.r]||'') + ' · 共 ' + ft.length + ' 次' + (yr !== 'all' ? '（' + yr + ' 年）' : '');
+  document.getElementById('m-body').innerHTML = ft.map(t => `
     <div class="visit-card">
-      <div class="visit-dates">${fmtDate(t.from)} → ${fmtDate(t.to)} · ${getDays(t.from,t.to)} day${getDays(t.from,t.to)>1?'s':''}${t.isNew?'<span class="new-badge">new</span>':''}</div>
+      <div class="visit-dates">${fmtDate(t.f)} → ${fmtDate(t.t)} · ${days(t.f,t.t)} 天${t._new?'<span class="new-badge">新</span>':''}</div>
       <div class="visit-cities">${(t.cities||[]).map(c=>`<span class="city-tag">${c}</span>`).join('')}</div>
-      <div class="visit-meta">${t.companion?'👥 '+t.companion:''}</div>
+      ${t.who?`<div class="visit-meta">👥 ${t.who}</div>`:''}
       ${t.note?`<div class="visit-note">"${t.note}"</div>`:''}
     </div>`).join('');
-  document.getElementById('m-trips').innerHTML=html;
-  document.getElementById('modal').classList.add('open');
+  document.getElementById('country-modal').classList.add('open');
 }
-function closeModal(){ document.getElementById('modal').classList.remove('open'); }
+function closeCountryModal() { document.getElementById('country-modal').classList.remove('open'); }
 
-// ── City chips ────────────────────────────────────────────────
-const chipData={f:[],e:[]};
-function addCityChip(prefix){
-  const inp=document.getElementById(`${prefix}-city-input`);
-  const val=inp.value.trim(); if(!val) return;
-  if(!chipData[prefix].includes(val)) chipData[prefix].push(val);
-  renderChips(prefix); inp.value='';
+// ── Add trip ──────────────────────────────────────────────────
+function addChip(p) {
+  const inp = document.getElementById(p === 'f' ? 'f-city' : 'e-city');
+  const v = inp.value.trim(); if (!v) return;
+  if (!chipBuf[p].includes(v)) chipBuf[p].push(v);
+  renderChips(p); inp.value = '';
 }
-function removeChip(prefix,city){
-  chipData[prefix]=chipData[prefix].filter(c=>c!==city);
-  renderChips(prefix);
-}
-function renderChips(prefix){
-  const el=document.getElementById(`${prefix}-cities-list`);
-  el.innerHTML=chipData[prefix].map(c=>`
-    <span class="city-chip">${c}<button onclick="removeChip('${prefix}','${c}')" title="Remove">×</button></span>`).join('');
+function removeChip(p, city) { chipBuf[p] = chipBuf[p].filter(c => c !== city); renderChips(p); }
+function renderChips(p) {
+  const el = document.getElementById(p + '-chips');
+  el.innerHTML = chipBuf[p].map(c =>
+    `<span class="chip">${c}<button onclick="removeChip('${p}','${c}')">×</button></span>`).join('');
 }
 
-// ── Add Trip ──────────────────────────────────────────────────
-function renderAddedList(){
-  const el=document.getElementById('added-trips');
-  if(!addedTrips.length){el.innerHTML='';return;}
-  el.innerHTML=`<div style="font-size:13px;color:#888;margin-bottom:10px">Added records (${addedTrips.length})</div>`;
-  [...addedTrips].reverse().forEach((t,ri)=>{
-    const i=addedTrips.length-1-ri;
-    const div=document.createElement('div');
-    div.className='edit-row';
-    div.innerHTML=`
-      <div class="edit-row-info">
-        <div class="edit-row-name">${FLAGS[t.country]||'🌍'} ${t.country} · ${(t.cities||[]).join(', ')}</div>
-        <div class="edit-row-meta">${fmtDate(t.from)} → ${fmtDate(t.to)}${t.companion?' · '+t.companion:''}</div>
-      </div>
-      <button class="btn btn-danger" onclick="deleteAdded(${i})">Delete</button>`;
-    el.appendChild(div);
-  });
+async function addTrip() {
+  const country = document.getElementById('f-country').value.trim();
+  const reg = document.getElementById('f-region').value;
+  const from = document.getElementById('f-from').value;
+  const to = document.getElementById('f-to').value;
+  const who = document.getElementById('f-companion').value.trim();
+  const note = document.getElementById('f-note').value.trim();
+  const cities = [...chipBuf.f];
+  const msg = document.getElementById('f-msg');
+  const btn = document.getElementById('f-save-btn');
+  msg.className = 'msg';
+  if (!country || !from || !to) { msg.textContent = '請填寫國家與日期'; msg.className = 'msg err'; return; }
+  if (new Date(to) < new Date(from)) { msg.textContent = '返回日期不能早於出發日期'; msg.className = 'msg err'; return; }
+  btn.textContent = '儲存中…'; btn.disabled = true;
+  const trip = { c: country, cities, r: reg, f: from, t: to, who, note, _ts: Date.now(), _new: true };
+  added.push(trip);
+  await saveAdded(); rebuild(); clearAddForm();
+  msg.textContent = '✓ 已儲存：' + country; msg.className = 'msg ok';
+  setTimeout(() => msg.className = 'msg', 3000);
+  btn.textContent = '儲存行程'; btn.disabled = false;
 }
-async function addTrip(){
-  const country=document.getElementById('f-country').value.trim();
-  const region=document.getElementById('f-region').value;
-  const from=document.getElementById('f-from').value;
-  const to=document.getElementById('f-to').value;
-  const companion=document.getElementById('f-companion').value.trim();
-  const note=document.getElementById('f-note').value.trim();
-  const cities=[...chipData.f];
-  const msg=document.getElementById('form-msg');
-  const btn=document.getElementById('save-btn');
-  msg.className='msg';
-  if(!country||!from||!to){msg.textContent='Please fill in country and dates.';msg.className='msg error';return;}
-  if(new Date(to)<new Date(from)){msg.textContent='Return date cannot be before departure.';msg.className='msg error';return;}
-  btn.textContent='Saving…';btn.disabled=true;
-  const trip={country,cities,region,from,to,companion,note,timestamp:new Date().toISOString(),isNew:true};
-  addedTrips.push(trip);
-  await saveAdded(); rebuild(); clearForm();
-  msg.textContent=`✓ Saved: ${country}`;msg.className='msg success';
-  setTimeout(()=>msg.className='msg',3000);
-  btn.textContent='Save trip';btn.disabled=false;
+
+function renderAddedList() {
+  const el = document.getElementById('f-added-list');
+  const userAdded = added.filter(a => !a._del && !a._ov && a._new);
+  if (!userAdded.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div style="font-size:13px;color:#666;margin-bottom:10px">已新增（${userAdded.length} 筆）</div>` +
+    userAdded.map((t, i) => `
+      <div class="erow">
+        <div><div class="erow-name">${FLAGS[t.c]||'🌍'} ${t.c} · ${(t.cities||[]).join('、')}</div>
+        <div class="erow-meta">${fmtDate(t.f)} → ${fmtDate(t.t)}${t.who?' · '+t.who:''}</div></div>
+        <button class="btn btn-d" onclick="deleteNewTrip(${i})">刪除</button>
+      </div>`).join('');
 }
-async function deleteAdded(i){
-  if(!confirm('Delete this record?'))return;
-  addedTrips.splice(i,1);
+
+async function deleteNewTrip(i) {
+  const userAdded = added.filter(a => !a._del && !a._ov && a._new);
+  const trip = userAdded[i];
+  const ai = added.indexOf(trip);
+  if (ai >= 0) added.splice(ai, 1);
   await saveAdded(); rebuild(); renderAddedList();
 }
-function clearForm(){
-  ['f-country','f-from','f-to','f-companion','f-note'].forEach(id=>document.getElementById(id).value='');
-  chipData.f=[]; renderChips('f');
-  document.getElementById('f-region').value='Asia';
-  document.getElementById('form-msg').className='msg';
+
+function clearAddForm() {
+  ['f-country','f-from','f-to','f-companion','f-note'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-region').value = 'Asia';
+  chipBuf.f = []; renderChips('f');
 }
 
-// ── Edit Records ──────────────────────────────────────────────
-let editingTrip=null;
-function renderEditList(){
-  const q=(document.getElementById('edit-search').value||'').toLowerCase();
-  const reg=document.getElementById('edit-region-filter').value;
-  const filtered=allTrips.filter(t=>
-    (!q||t.country.toLowerCase().includes(q)||(t.cities||[]).some(c=>c.toLowerCase().includes(q)))&&
-    (!reg||t.region===reg)
-  ).sort((a,b)=>a.from.localeCompare(b.from));
-  document.getElementById('edit-count').textContent=`${filtered.length} record${filtered.length!==1?'s':''}`;
-  const list=document.getElementById('edit-list');
-  list.innerHTML='';
-  filtered.forEach(t=>{
-    const isBase=BASE_TRIPS.includes(t);
-    const div=document.createElement('div');
-    div.className='edit-row';
-    div.innerHTML=`
-      <div class="edit-row-info">
-        <div class="edit-row-name">${FLAGS[t.country]||'🌍'} ${t.country}${isBase?'':' <span class="new-badge">new</span>'}</div>
-        <div class="edit-row-meta">${(t.cities||[]).join(', ')} · ${fmtDate(t.from)} → ${fmtDate(t.to)}${t.companion?' · '+t.companion:''}</div>
-        ${t.note?`<div style="font-size:12px;color:#aaa;font-style:italic;margin-top:2px">"${t.note}"</div>`:''}
+// ── Edit ──────────────────────────────────────────────────────
+function tripKey(t) { return t.c + '|' + t.f + '|' + t.t; }
+
+function renderEditList() {
+  const q = (document.getElementById('e-search').value || '').toLowerCase();
+  const reg = document.getElementById('e-region-filter').value;
+  const filtered = allTrips.filter(t =>
+    (!q || t.c.toLowerCase().includes(q) || (t.cities||[]).some(c => c.toLowerCase().includes(q))) &&
+    (!reg || t.r === reg)
+  ).sort((a,b) => a.f.localeCompare(b.f));
+  document.getElementById('e-count').textContent = filtered.length + ' 筆';
+  const list = document.getElementById('e-list');
+  list.innerHTML = '';
+  filtered.forEach(t => {
+    const isBase = BASE.includes(t);
+    const key = tripKey(t);
+    const div = document.createElement('div');
+    div.className = 'erow';
+    div.innerHTML = `
+      <div>
+        <div class="erow-name">${FLAGS[t.c]||'🌍'} ${t.c}${isBase?'':'<span class="new-badge" style="margin-left:6px">新</span>'}</div>
+        <div class="erow-meta">${(t.cities||[]).join('、')} · ${fmtDate(t.f)} → ${fmtDate(t.t)}${t.who?' · '+t.who:''}</div>
+        ${t.note?`<div style="font-size:12px;color:#888;font-style:italic;margin-top:2px">"${t.note}"</div>`:''}
       </div>
-      <button class="btn" style="flex-shrink:0;font-size:12px;padding:5px 14px;color:#7fb3f5;border-color:#2a5a8f" onclick="openEditModal_t(allTrips[${allTrips.indexOf(t)}])">Edit</button>`;
+      <button class="btn" style="font-size:12px;padding:5px 14px;color:#7fb3f5;border-color:#2a5a8f;flex-shrink:0"
+        onclick="openEditModal('${key}')">編輯</button>`;
     list.appendChild(div);
   });
 }
-function openEditModal_t(t){
-  editingTrip=t;
-  document.getElementById('e-country').value=t.country;
-  document.getElementById('e-region').value=t.region;
-  document.getElementById('e-from').value=t.from;
-  document.getElementById('e-to').value=t.to;
-  document.getElementById('e-companion').value=t.companion||'';
-  document.getElementById('e-note').value=t.note||'';
-  chipData.e=[...(t.cities||[])];
-  renderChips('e');
-  document.getElementById('edit-msg').className='msg';
+
+function openEditModal(key) {
+  const t = allTrips.find(x => tripKey(x) === key);
+  if (!t) return;
+  editTarget = t;
+  document.getElementById('e-country').value = t.c;
+  document.getElementById('e-region').value = t.r;
+  document.getElementById('e-from').value = t.f;
+  document.getElementById('e-to').value = t.t;
+  document.getElementById('e-companion').value = t.who || '';
+  document.getElementById('e-note').value = t.note || '';
+  chipBuf.e = [...(t.cities || [])]; renderChips('e');
+  document.getElementById('e-msg').className = 'msg';
   document.getElementById('edit-modal').classList.add('open');
 }
-function closeEditModal(){ document.getElementById('edit-modal').classList.remove('open'); editingTrip=null; }
-async function saveEdit(){
-  const msg=document.getElementById('edit-msg');
-  const updated={
-    ...editingTrip,
-    country:document.getElementById('e-country').value.trim(),
-    region:document.getElementById('e-region').value,
-    from:document.getElementById('e-from').value,
-    to:document.getElementById('e-to').value,
-    companion:document.getElementById('e-companion').value.trim(),
-    note:document.getElementById('e-note').value.trim(),
-    cities:[...chipData.e],
+function closeEditModal() { document.getElementById('edit-modal').classList.remove('open'); editTarget = null; }
+
+async function saveEdit() {
+  const msg = document.getElementById('e-msg');
+  if (!editTarget) return;
+  const updated = {
+    ...editTarget,
+    c: document.getElementById('e-country').value.trim(),
+    r: document.getElementById('e-region').value,
+    f: document.getElementById('e-from').value,
+    t: document.getElementById('e-to').value,
+    who: document.getElementById('e-companion').value.trim(),
+    note: document.getElementById('e-note').value.trim(),
+    cities: [...chipBuf.e],
   };
-  if(!updated.country||!updated.from||!updated.to){msg.textContent='Please fill in country and dates.';msg.className='msg error';return;}
-  const isBase=BASE_TRIPS.includes(editingTrip);
-  if(isBase){
-    const idx=BASE_TRIPS.indexOf(editingTrip);
-    // remove old override if any
-    const oi=addedTrips.findIndex(x=>x.__overrideIdx===idx);
-    if(oi>=0) addedTrips.splice(oi,1);
-    // hide base
-    BASE_TRIPS[idx].__hidden=true;
-    // push override
-    addedTrips.push({...updated,__overrideIdx:idx,isNew:false,timestamp:updated.timestamp||new Date().toISOString()});
+  if (!updated.c || !updated.f || !updated.t) { msg.textContent = '請填寫國家與日期'; msg.className = 'msg err'; return; }
+
+  const isBase = BASE.includes(editTarget);
+  if (isBase) {
+    const idx = BASE.indexOf(editTarget);
+    const oi = added.findIndex(a => a._ov === idx);
+    if (oi >= 0) added.splice(oi, 1);
+    added.push({ ...updated, _ov: idx, _new: false, _ts: Date.now() });
   } else {
-    const ai=addedTrips.indexOf(editingTrip);
-    if(ai>=0) addedTrips[ai]={...addedTrips[ai],...updated};
+    const ai = added.findIndex(a => tripKey(a) === tripKey(editTarget));
+    if (ai >= 0) added[ai] = { ...added[ai], ...updated };
   }
   await saveAdded(); rebuild(); renderEditList();
-  msg.textContent='✓ Saved';msg.className='msg success';
-  setTimeout(closeEditModal,700);
+  msg.textContent = '✓ 已儲存'; msg.className = 'msg ok';
+  setTimeout(closeEditModal, 700);
 }
-async function deleteEdit(){
-  if(!confirm('Delete this record?'))return;
-  const isBase=BASE_TRIPS.includes(editingTrip);
-  if(isBase){
-    const idx=BASE_TRIPS.indexOf(editingTrip);
-    BASE_TRIPS[idx].__hidden=true;
-    addedTrips.push({__deleted:true,targetIdx:idx,timestamp:'del_'+idx});
+
+async function deleteEdit() {
+  if (!confirm('確定刪除這筆紀錄？') || !editTarget) return;
+  const isBase = BASE.includes(editTarget);
+  if (isBase) {
+    const idx = BASE.indexOf(editTarget);
+    const oi = added.findIndex(a => a._ov === idx);
+    if (oi >= 0) added.splice(oi, 1);
+    added.push({ _del: true, _idx: idx, _ts: Date.now() });
   } else {
-    const ai=addedTrips.indexOf(editingTrip);
-    if(ai>=0) addedTrips.splice(ai,1);
+    const ai = added.findIndex(a => tripKey(a) === tripKey(editTarget));
+    if (ai >= 0) added.splice(ai, 1);
   }
   await saveAdded(); rebuild(); renderEditList(); closeEditModal();
 }
 
-// ── City coordinates ─────────────────────────────────────────
-const CITY_COORDS = {
-  "Hong Kong":[22.3193,114.1694],"Beijing":[39.9042,116.4074],"Tokyo":[35.6762,139.6503],
-  "Seoul":[37.5665,126.9780],"Busan":[35.1796,129.0756],"Wenzhou":[28.0000,120.6719],
-  "Singapore":[1.3521,103.8198],"London":[51.5074,-0.1278],"Osaka":[34.6937,135.5023],
-  "Kyoto":[35.0116,135.7681],"Hokkaido":[43.2203,142.8635],"Bangkok":[13.7563,100.5018],
-  "Barcelona":[41.3851,2.1734],"Madrid":[40.4168,-3.7038],"Tossa de Mar":[41.7219,2.9347],
-  "Porto":[41.1579,-8.6291],"Lisbon":[38.7169,-9.1399],"Amsterdam":[52.3676,4.9041],
-  "The Hague":[52.0705,4.3007],"Rotterdam":[51.9225,4.4792],"Paris":[48.8566,2.3522],
-  "Milan":[45.4654,9.1859],"Brussels":[50.8503,4.3517],"Reykjavik":[64.1265,-21.8174],
-  "Bucharest":[44.4268,26.1025],"Budapest":[47.4979,19.0402],"Dublin":[53.3498,-6.2603],
-  "Lyon":[45.7640,4.8357],"Venice":[45.4408,12.3155],"Malmö":[55.6050,13.0038],
-  "Copenhagen":[55.6761,12.5683],"Berlin":[52.5200,13.4050],"Kraków":[50.0647,19.9450],
-  "Vienna":[48.2082,16.3738],"Bratislava":[48.1486,17.1077],"Prague":[50.0755,14.4378],
-  "Karlovy Vary":[50.2304,12.8710],"Athens":[37.9838,23.7275],"Santorini":[36.3932,25.4615],
-  "Hallstatt":[47.5622,13.6493],"Salzburg":[47.8095,13.0550],"Český Krumlov":[48.8127,14.3175],
-  "Stockholm":[59.3293,18.0686],"Palma de Mallorca":[39.5696,2.6502],"Hamburg":[53.5753,10.0153],
-  "Eindhoven":[51.4416,5.4697],"Bruges":[51.2093,3.2247],"Ghent":[51.0543,3.7174],
-  "Luxembourg City":[49.6117,6.1319],"Rome":[41.9028,12.4964],
-};
+// ── Helpers ───────────────────────────────────────────────────
+function fmtDate(s) {
+  const d = new Date(s);
+  return d.getFullYear() + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0');
+}
+function days(f, t) { return Math.max(1, Math.round((new Date(t)-new Date(f))/86400000)); }
 
-let cityMarkers = L.layerGroup();
+// ── Map ───────────────────────────────────────────────────────
+let leafletMap = null;
+let geoLayer = null;
 
-function updateCityMarkers() {
-  cityMarkers.clearLayers();
-  const ft = filteredTrips();
-  const seen = new Set();
-  ft.forEach(t => {
-    (t.cities||[]).forEach(city => {
-      if (seen.has(city)) return;
-      seen.add(city);
-      const coords = CITY_COORDS[city];
-      if (!coords) return;
-      const marker = L.circleMarker(coords, {
-        radius: 5,
-        fillColor: '#7fb3f5',
-        color: '#0f0f1a',
-        weight: 1.5,
-        fillOpacity: 0.9,
-        pane: 'markerPane',
-      });
-      marker.bindTooltip(`<b>${city}</b>${t.country}`, {
-        className: 'map-tooltip', sticky: true, direction: 'top', offset:[0,-6]
-      });
-      marker.on('click', () => openModal(t.country));
-      cityMarkers.addLayer(marker);
-    });
+function updateMapColors(ft) {
+  if (!geoLayer) return;
+  const visited = new Set(ft.map(t => NAME_TO_ISO[t.c]).filter(Boolean));
+  geoLayer.setStyle(f => {
+    const a2 = ISO_NUM[+f.id];
+    const v = visited.has(a2);
+    return { fillColor: v ? '#1e4a7a' : '#1a1a2e', fillOpacity: v ? 0.9 : 0.5, color: v ? '#4a8abf' : '#2a2a44', weight: v ? 1 : 0.4 };
   });
-  if (leafletMap && !leafletMap.hasLayer(cityMarkers)) cityMarkers.addTo(leafletMap);
 }
-let leafletMap=null, geoLayer=null;
-function redrawMap(){ if(geoLayer) geoLayer.setStyle(f=>countryStyle(f)); }
-function countryStyle(f){
-  const name=f.properties.name_en;
-  const ft = filteredTrips();
-  const visited = ft.some(t=>t.country===name);
-  return{fillColor:visited?'#1e4a7a':'#1a1a2e',fillOpacity:visited?.9:.5,color:visited?'#4a8abf':'#2a2a44',weight:visited?1:.4};
-}
-function initMap(){
-  if(leafletMap) return;
-  leafletMap=L.map('leaflet-map',{center:[30,10],zoom:2,minZoom:1.5,maxZoom:12,
-    zoomControl:true,scrollWheelZoom:true,doubleClickZoom:true,
-    dragging:true,touchZoom:true,attributionControl:false});
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19}).addTo(leafletMap);
-  // city name label layer (shows at zoom 4+)
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19,pane:'shadowPane'}).addTo(leafletMap);
+
+function initMap() {
+  if (leafletMap) return;
+  leafletMap = L.map('leaflet-map', {
+    center: [30, 15], zoom: 2, minZoom: 1.5, maxZoom: 10,
+    zoomControl: true, scrollWheelZoom: true, dragging: true, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 19 }).addTo(leafletMap);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 19, opacity: 0.6 }).addTo(leafletMap);
+
   fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
-    .then(r=>r.json()).then(world=>{
-      const s=document.createElement('script');
-      s.src='https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js';
-      s.onload=()=>{
-        const geojson=topojson.feature(world,world.objects.countries);
-        geojson.features.forEach(f=>{
-          const a2=isoNumToAlpha2[+f.id];
-          f.properties.name_en=a2?isoToCountry[a2]:null;
-        });
-        geoLayer=L.geoJSON(geojson,{
-          style:countryStyle,
-          onEachFeature(f,layer){
-            const cName=f.properties.name_en;
+    .then(r => r.json())
+    .then(world => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js';
+      s.onload = () => {
+        const geojson = topojson.feature(world, world.objects.countries);
+        const ft = getFiltered();
+        const visited = new Set(ft.map(t => NAME_TO_ISO[t.c]).filter(Boolean));
+        geoLayer = L.geoJSON(geojson, {
+          style(f) {
+            const a2 = ISO_NUM[+f.id];
+            const v = visited.has(a2);
+            return { fillColor: v ? '#1e4a7a' : '#1a1a2e', fillOpacity: v ? 0.9 : 0.5, color: v ? '#4a8abf' : '#2a2a44', weight: v ? 1 : 0.4 };
+          },
+          onEachFeature(f, layer) {
+            const a2 = ISO_NUM[+f.id];
+            const cName = a2 ? ISO_TO_NAME[a2] : null;
             layer.on({
-              mouseover(e){
-                const ft=filteredTrips();
-                if(!ft.some(t=>t.country===cName))return;
-                layer.setStyle({fillColor:'#2a6aaa',weight:1.5,color:'#7fb3f5'});
-                const trips=ft.filter(t=>t.country===cName);
-                const years=[...new Set(trips.map(t=>new Date(t.from).getFullYear()))].sort();
+              mouseover(e) {
+                const ft2 = getFiltered();
+                if (!cName || !ft2.some(t => t.c === cName)) return;
+                layer.setStyle({ fillColor: '#2a6aaa', weight: 1.5, color: '#7fb3f5' });
+                const trips = ft2.filter(t => t.c === cName);
+                const years = [...new Set(trips.map(t => new Date(t.f).getFullYear()))].sort();
                 layer.bindTooltip(
-                  `<b>${FLAGS[cName]||''}  ${cName}</b>${trips.length} trip${trips.length>1?'s':''} · ${years.join(', ')}`,
-                  {sticky:true,className:'map-tooltip'}
+                  `<b>${FLAGS[cName]||''} ${cName}</b>${trips.length} 次 · ${years.join('、')} 年`,
+                  { sticky: true, className: 'lf-tip' }
                 ).openTooltip(e.latlng);
               },
-              mouseout(){geoLayer.resetStyle(layer);layer.unbindTooltip();},
-              click(){const ft=filteredTrips();if(cName&&ft.some(t=>t.country===cName))openModal(cName);}
+              mouseout() { geoLayer.resetStyle(layer); layer.unbindTooltip(); },
+              click() {
+                const ft2 = getFiltered();
+                if (cName && ft2.some(t => t.c === cName)) openCountryModal(cName);
+              }
             });
           }
         }).addTo(leafletMap);
-        cityMarkers.addTo(leafletMap);
-        updateCityMarkers();
       };
       document.head.appendChild(s);
-    }).catch(()=>{
-      document.getElementById('map-container').innerHTML='<p style="color:#888;padding:2rem">Map failed to load. Please use the Countries tab.</p>';
+    }).catch(() => {
+      document.getElementById('map-wrap').innerHTML = '<p style="color:#666;padding:2rem">地圖載入失敗，請使用國家列表。</p>';
     });
 }
 
 // ── Init ──────────────────────────────────────────────────────
 (async () => {
-  await fetchAdded();
-
-  // Build byCountry first so stats/map have data
-  BASE_TRIPS.forEach(t => t.__hidden = false);
-  const visibleAdded = addedTrips.filter(t => !t.__deleted);
-  allTrips = [...BASE_TRIPS, ...visibleAdded].sort((a,b) => a.from.localeCompare(b.from));
-  byCountry = {};
-  allTrips.forEach(t => {
-    if (!byCountry[t.country]) byCountry[t.country] = {trips:[], region:t.region};
-    byCountry[t.country].trips.push(t);
-  });
-
-  rebuild(); // full rebuild with overrides applied
+  await loadAdded();
+  rebuild();
   initMap();
 })();
 </script>
